@@ -1,0 +1,31 @@
+# Wails / Go build output
+build/bin/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+
+# Frontend
+node_modules/
+frontend/dist/
+
+# Config local do app (gerado em runtime em %APPDATA%)
+config.json
+
+# Ferramentas do Claude Code (não fazem parte do projeto)
+.claude/
+
+# Editores / IDEs
+.idea/
+.vscode/
+*.swp
+
+# Sistema operacional
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
