@@ -1,6 +1,6 @@
 import {useState} from 'react';
-import {ButtonConfig} from '../types';
-import KeyCapture from './KeyCapture';
+import {Action, ButtonConfig} from '../types';
+import ActionFields, {isActionValid} from './ActionFields';
 
 interface Props {
   draft: ButtonConfig;
@@ -10,18 +10,20 @@ interface Props {
   onCancel: () => void;
 }
 
-// ButtonEditor é o modal de criação/edição de um botão (label + combo).
+// ButtonEditor é o modal de criação/edição de um botão (label + ação). A
+// ação pode ser de qualquer tipo (keypress, launch, url, sequence) via
+// ActionFields.
 export default function ButtonEditor({draft, isNew, onSave, onDelete, onCancel}: Props) {
   const [label, setLabel] = useState(draft.label);
-  const [keys, setKeys] = useState<string[]>(draft.action.keys);
+  const [action, setAction] = useState<Action>(draft.action);
 
   const save = () => {
-    onSave({...draft, label: label.trim(), action: {type: 'keypress', keys}});
+    onSave({...draft, label: label.trim(), action});
   };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-      <div className="w-full max-w-md rounded-2xl bg-slate-800 p-6 shadow-2xl">
+      <div className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-2xl bg-slate-800 p-6 shadow-2xl">
         <h2 className="mb-4 text-lg font-bold">
           {isNew ? 'Novo botão' : 'Editar botão'}
           <span className="ml-2 text-xs font-normal text-slate-500">
@@ -38,8 +40,7 @@ export default function ButtonEditor({draft, isNew, onSave, onDelete, onCancel}:
           className="mb-4 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 outline-none focus:border-indigo-500"
         />
 
-        <label className="mb-1 block text-sm text-slate-400">Combinação de teclas</label>
-        <KeyCapture value={keys} onChange={setKeys} />
+        <ActionFields value={action} onChange={setAction} />
 
         <div className="mt-6 flex items-center justify-between">
           {!isNew ? (
@@ -61,7 +62,7 @@ export default function ButtonEditor({draft, isNew, onSave, onDelete, onCancel}:
             </button>
             <button
               onClick={save}
-              disabled={keys.length === 0}
+              disabled={!isActionValid(action)}
               className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium hover:bg-indigo-500 disabled:opacity-40"
             >
               Salvar botão

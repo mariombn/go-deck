@@ -15,8 +15,6 @@ kanban-plugin: board
 
 ## 📋 Backlog
 
-- [ ] Novos tipos de `Action`: launch, script, url, sequence
-	  Já há a interface polimórfica `Action`; é só adicionar implementações.
 - [ ] Ícones/imagens nos botões
 - [ ] Reordenação drag-and-drop dos botões
 - [ ] Perfis múltiplos
@@ -59,6 +57,11 @@ kanban-plugin: board
 - [x] Persistência em `config.json` + broadcast ao vivo
 - [x] Validado end-to-end no celular real
 - [x] Publicado no GitHub
+- [x] Novos tipos de `Action`: launch, url, sequence
+	  Interface `Launcher` (por SO) + `ExecContext`; `Spec` chato com campos
+	  por tipo; sequence aninhável (limite 10) abortando no 1º erro. `script`
+	  foi fundido em `launch` (sem shell, `path` + `args`). Editor com seletor
+	  de tipo e testes do `Build()`.
 
 
 

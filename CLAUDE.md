@@ -25,11 +25,12 @@ A CLI do Wails é instalada via `go install` e fica em `$GOPATH/bin` (ex.: `C:\U
 **Fonte da verdade da config.** `internal/config.Store` (thread-safe) é a única fonte, persistida em `%APPDATA%/DeckPilot/config.json`. O **desktop** lê/escreve via bindings; o **celular** é read-only + envia `press` pelo WS. `App.SaveConfig` persiste **e** faz broadcast do novo config a todos os celulares conectados.
 
 **Caminho crítico de um toque:**
-`celular → WS {type:"press",buttonId} → server.press → Store.FindButton → action.Spec.Build() → Action.Execute(InputController) → SendKeys`.
+`celular → WS {type:"press",buttonId} → server.press → Store.FindButton → action.Spec.Build() → Action.Execute(ExecContext{Input, Launcher}) → SendKeys / Launch / OpenURL`.
 
 **Camadas isoladas por interface (para SO futuro):**
 - `InputController` (`internal/input`) — implementação Windows é **`SendInput` em Go puro, sem CGO** (`sendinput_windows.go`); outros SOs são stub (`sendinput_other.go`). O vocabulário de teclas vive em `keymap.go`.
-- `Action` (`internal/action`) — polimórfico via `Spec.Build()`; só `KeypressAction` na POC. Adicionar tipos = nova implementação, sem refatorar o resto.
+- `Launcher` (`internal/launch`) — abre programas/URLs (`os/exec`, **sem shell**); Windows (`launcher_windows.go`) usa `exec.Command` para `launch` e `rundll32 url.dll` para `url`; outros SOs são stub. Mesmo padrão do `InputController`.
+- `Action` (`internal/action`) — polimórfico via `Spec.Build()`. Tipos: `keypress`, `launch`, `url`, `sequence` (lista de ações em ordem, aninhável até `maxSequenceDepth`=10, **aborta no 1º erro**). `Spec` é um struct **chato** (todos os campos `omitempty`); cada tipo usa só os seus. As ações recebem um `ExecContext{Input, Launcher}` em `Execute` — adicionar uma capacidade nova = novo campo no `ExecContext`, sem mudar a assinatura. Adicionar tipos = nova implementação, sem refatorar o resto.
 
 **Dev vs. prod no servidor de assets** (build tags, casados com a tag `dev` do Wails):
 - `assets_dev.go` (`//go:build dev`) — reverse-proxy para o Vite em `127.0.0.1:5173`.
@@ -45,7 +46,7 @@ A CLI do Wails é instalada via `go install` e fica em `$GOPATH/bin` (ex.: `C:\U
 - Grid default **3 linhas × 5 colunas**; o celular **transpõe** para 3×5↔5×3 em portrait (só na renderização — o modelo de dados não muda).
 - `id` de botão é gerado **no Go** (config `normalize`); o frontend nunca inventa id. Encolher o grid **dropa** botões órfãos.
 - Porta padrão **8754**, lida na inicialização (trocar exige reiniciar). Porta ocupada ⇒ erro explícito, sem fallback.
-- **Sem auth/HTTPS** (POC): só validação de `Origin` no upgrade do WS. Qualquer um na LAN pode acionar botões.
+- **Sem auth/HTTPS** (POC): só validação de `Origin` no upgrade do WS. Qualquer um na LAN pode acionar botões. **Com `launch`, isso vira execução de processos**: quem está na LAN dispara os botões já configurados (abre os programas/URLs definidos no desktop). O celular só envia **id de botão**, nunca um `path` — o `path`/`url` só é definido no editor desktop. Risco aceito na POC; mitigação real depende do item "Token de autenticação no QR".
 - `main.tsx` tem um overlay que exibe qualquer erro de runtime na tela (útil debugando no celular, sem devtools).
 
 Próximos passos: ver [docs/kanban.md](docs/kanban.md).

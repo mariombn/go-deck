@@ -9,23 +9,26 @@ import (
 
 	"go-deck/internal/config"
 	"go-deck/internal/input"
+	"go-deck/internal/launch"
 	"go-deck/internal/server"
 )
 
 // App é a struct exposta ao frontend desktop via bindings do Wails.
 type App struct {
-	ctx    context.Context
-	assets embed.FS
-	input  input.InputController
-	store  *config.Store
-	server *server.Server
+	ctx      context.Context
+	assets   embed.FS
+	input    input.InputController
+	launcher launch.Launcher
+	store    *config.Store
+	server   *server.Server
 }
 
-// NewApp cria a App, já com o controller de input do SO atual.
+// NewApp cria a App, já com o controller de input e o launcher do SO atual.
 func NewApp(assets embed.FS) *App {
 	return &App{
-		assets: assets,
-		input:  input.New(),
+		assets:   assets,
+		input:    input.New(),
+		launcher: launch.New(),
 	}
 }
 
@@ -42,7 +45,7 @@ func (a *App) startup(ctx context.Context) {
 	a.store = store
 	log.Printf("config carregada de %s", store.Path())
 
-	a.server = server.New(store, a.input, a.assets)
+	a.server = server.New(store, a.input, a.launcher, a.assets)
 	a.server.Start()
 }
 

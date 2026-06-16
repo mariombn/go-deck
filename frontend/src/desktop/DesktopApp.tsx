@@ -204,7 +204,7 @@ export default function DesktopApp() {
 
           <div className="mt-4 rounded-lg bg-amber-500/10 p-3 text-xs text-amber-300">
             ⚠️ Sem autenticação: qualquer dispositivo na sua rede local que abrir esta URL pode acionar os botões
-            (e executar as teclas) no seu PC.
+            existentes — incluindo abrir programas e URLs configurados — no seu PC.
           </div>
         </aside>
       </div>

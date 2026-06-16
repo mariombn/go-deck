@@ -3,6 +3,10 @@ export namespace action {
 	export class Spec {
 	    type: string;
 	    keys?: string[];
+	    path?: string;
+	    args?: string[];
+	    url?: string;
+	    steps?: Spec[];
 	
 	    static createFrom(source: any = {}) {
 	        return new Spec(source);
@@ -12,7 +16,29 @@ export namespace action {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.type = source["type"];
 	        this.keys = source["keys"];
+	        this.path = source["path"];
+	        this.args = source["args"];
+	        this.url = source["url"];
+	        this.steps = this.convertValues(source["steps"], Spec);
 	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
 	}
 
 }

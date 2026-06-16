@@ -1,5 +1,5 @@
 import {ButtonConfig} from '../types';
-import {comboLabel} from '../lib/keys';
+import {actionSummary} from '../lib/actions';
 
 interface Props {
   button: ButtonConfig | null;
@@ -45,7 +45,7 @@ export default function DeckButton({button, mode, flash, onClick}: Props) {
         {button.label || '(sem nome)'}
       </span>
       <span className="mt-1 text-[10px] font-mono text-slate-300/80 line-clamp-1">
-        {comboLabel(button.action.keys)}
+        {actionSummary(button.action)}
       </span>
     </button>
   );

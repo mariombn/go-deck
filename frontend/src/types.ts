@@ -2,7 +2,16 @@
 // do backend Go (config.DeckConfig) e o protocolo WebSocket.
 
 export type KeypressAction = { type: 'keypress'; keys: string[] };
-export type Action = KeypressAction; // união expansível no futuro
+export type LaunchAction = { type: 'launch'; path: string; args?: string[] };
+export type UrlAction = { type: 'url'; url: string };
+
+// Passos de um sequence: qualquer ação que não seja outro sequence (o editor
+// não expõe aninhamento, embora o backend aceite-o vindo do config.json).
+export type StepAction = KeypressAction | LaunchAction | UrlAction;
+export type SequenceAction = { type: 'sequence'; steps: StepAction[] };
+
+export type Action = StepAction | SequenceAction;
+export type ActionType = Action['type'];
 
 export interface Position {
   row: number;

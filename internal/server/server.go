@@ -14,16 +14,19 @@ import (
 
 	"github.com/gorilla/websocket"
 
+	"go-deck/internal/action"
 	"go-deck/internal/config"
 	"go-deck/internal/input"
+	"go-deck/internal/launch"
 )
 
 // Server orquestra HTTP + WebSocket + descoberta de IP + QR Code.
 type Server struct {
-	store  *config.Store
-	input  input.InputController
-	assets embed.FS
-	hub    *hub
+	store    *config.Store
+	input    input.InputController
+	launcher launch.Launcher
+	assets   embed.FS
+	hub      *hub
 
 	mu        sync.RWMutex
 	ips       []string
@@ -43,12 +46,13 @@ type NetworkInfo struct {
 }
 
 // New cria o servidor com suas dependências.
-func New(store *config.Store, ctrl input.InputController, assets embed.FS) *Server {
+func New(store *config.Store, ctrl input.InputController, launcher launch.Launcher, assets embed.FS) *Server {
 	s := &Server{
-		store:  store,
-		input:  ctrl,
-		assets: assets,
-		hub:    newHub(),
+		store:    store,
+		input:    ctrl,
+		launcher: launcher,
+		assets:   assets,
+		hub:      newHub(),
 	}
 	s.hub.onPress = s.press
 	s.hub.initial = func() []byte { return s.configMessage() }
@@ -140,10 +144,11 @@ func (s *Server) press(buttonID string) (bool, string) {
 	if err != nil {
 		return false, err.Error()
 	}
-	if err := act.Execute(s.input); err != nil {
+	ctx := action.ExecContext{Input: s.input, Launcher: s.launcher}
+	if err := act.Execute(ctx); err != nil {
 		return false, err.Error()
 	}
-	logf("press %s (%s) -> %v", buttonID, btn.Label, btn.Action.Keys)
+	logf("press %s (%s) -> %s", buttonID, btn.Label, btn.Action.Type)
 	return true, ""
 }
 
