@@ -1,4 +1,4 @@
-import {Action, ActionType, StepAction} from '../types';
+import {Action, ActionType, DiscordOp, ObsOp, StepAction} from '../types';
 import KeyCapture from './KeyCapture';
 
 // Rótulos amigáveis dos tipos de ação. STEP_TYPES exclui 'sequence' porque o
@@ -8,9 +8,28 @@ export const ACTION_TYPES: {value: ActionType; label: string}[] = [
   {value: 'keypress', label: 'Atalho de teclas'},
   {value: 'launch', label: 'Abrir programa'},
   {value: 'url', label: 'Abrir URL'},
+  {value: 'obs', label: 'OBS Studio'},
+  {value: 'discord', label: 'Discord'},
   {value: 'sequence', label: 'Sequência'},
 ];
 export const STEP_TYPES = ACTION_TYPES.filter((t) => t.value !== 'sequence');
+
+// Operações do OBS. targetLabel presente => a operação exige um alvo
+// (cena/fonte/hotkey); ausente => não precisa (toggles).
+export const OBS_OPS: {value: ObsOp; label: string; targetLabel?: string}[] = [
+  {value: 'scene', label: 'Trocar de cena', targetLabel: 'Nome da cena'},
+  {value: 'toggle_record', label: 'Gravação (liga/desliga)'},
+  {value: 'toggle_stream', label: 'Transmissão (liga/desliga)'},
+  {value: 'toggle_mute', label: 'Mudo da fonte (liga/desliga)', targetLabel: 'Nome da fonte de áudio'},
+  {value: 'hotkey', label: 'Disparar hotkey', targetLabel: 'Nome da hotkey do OBS'},
+];
+
+const DISCORD_OPS: {value: DiscordOp; label: string}[] = [
+  {value: 'mute', label: 'Alternar mudo (mute)'},
+  {value: 'deafen', label: 'Alternar surdo (deafen)'},
+];
+
+const obsNeedsTarget = (op: ObsOp) => !!OBS_OPS.find((o) => o.value === op)?.targetLabel;
 
 // emptyAction devolve uma ação "em branco" do tipo pedido (ao trocar o tipo
 // no dropdown, recomeçamos com os campos do novo tipo).
@@ -22,6 +41,10 @@ export function emptyAction(type: ActionType): Action {
       return {type: 'launch', path: '', args: []};
     case 'url':
       return {type: 'url', url: ''};
+    case 'obs':
+      return {type: 'obs', obsOp: 'scene', target: ''};
+    case 'discord':
+      return {type: 'discord', discordOp: 'mute', keys: []};
     case 'sequence':
       return {type: 'sequence', steps: []};
   }
@@ -37,6 +60,10 @@ export function isActionValid(a: Action): boolean {
       return a.path.trim() !== '';
     case 'url':
       return a.url.trim() !== '';
+    case 'obs':
+      return !obsNeedsTarget(a.obsOp) || (a.target ?? '').trim() !== '';
+    case 'discord':
+      return a.keys.length > 0;
     case 'sequence':
       return a.steps.length > 0 && a.steps.every(isActionValid);
   }
@@ -116,6 +143,68 @@ export default function ActionFields({value, onChange, allowSequence = true}: Fi
             placeholder="https://exemplo.com"
             className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 font-mono text-sm outline-none focus:border-indigo-500"
           />
+        </div>
+      )}
+
+      {value.type === 'obs' && (
+        <div className="space-y-3">
+          <div>
+            <label className="mb-1 block text-sm text-slate-400">Operação</label>
+            <select
+              value={value.obsOp}
+              onChange={(e) => onChange({...value, obsOp: e.target.value as ObsOp})}
+              className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 outline-none focus:border-indigo-500"
+            >
+              {OBS_OPS.map((o) => (
+                <option key={o.value} value={o.value}>
+                  {o.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          {obsNeedsTarget(value.obsOp) && (
+            <div>
+              <label className="mb-1 block text-sm text-slate-400">
+                {OBS_OPS.find((o) => o.value === value.obsOp)?.targetLabel}
+              </label>
+              <input
+                value={value.target ?? ''}
+                onChange={(e) => onChange({...value, target: e.target.value})}
+                placeholder="Exatamente como aparece no OBS"
+                className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 font-mono text-sm outline-none focus:border-indigo-500"
+              />
+            </div>
+          )}
+          <p className="text-xs text-slate-500">
+            Requer o obs-websocket habilitado no OBS e a conexão configurada no painel lateral.
+          </p>
+        </div>
+      )}
+
+      {value.type === 'discord' && (
+        <div className="space-y-3">
+          <div>
+            <label className="mb-1 block text-sm text-slate-400">Ação</label>
+            <select
+              value={value.discordOp}
+              onChange={(e) => onChange({...value, discordOp: e.target.value as DiscordOp})}
+              className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 outline-none focus:border-indigo-500"
+            >
+              {DISCORD_OPS.map((o) => (
+                <option key={o.value} value={o.value}>
+                  {o.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="mb-1 block text-sm text-slate-400">Tecla do keybind</label>
+            <KeyCapture value={value.keys} onChange={(keys) => onChange({...value, keys})} />
+          </div>
+          <p className="rounded-lg bg-amber-500/10 p-2 text-xs text-amber-300">
+            O Discord não expõe controle por rede: configure este atalho como <b>keybind global</b> nas
+            Configurações → Atalhos de Teclado do Discord e capture aqui a mesma tecla.
+          </p>
         </div>
       )}
 

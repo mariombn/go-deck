@@ -70,6 +70,16 @@ func (a *App) SaveConfig(cfg config.DeckConfig) (config.DeckConfig, error) {
 	return saved, nil
 }
 
+// TestOBS tenta conectar ao OBS com as settings informadas no editor (ainda
+// não persistidas) e devolve erro se não conseguir. Alimenta o botão
+// "Testar conexão" do painel de integrações.
+func (a *App) TestOBS(c config.OBSConfig) error {
+	if a.server == nil {
+		return fmt.Errorf("servidor não iniciado")
+	}
+	return a.server.TestOBS(c)
+}
+
 // GetNetworkInfo devolve IPs candidatos, porta efetiva, URL e erros de bind.
 func (a *App) GetNetworkInfo() server.NetworkInfo {
 	if a.server == nil {

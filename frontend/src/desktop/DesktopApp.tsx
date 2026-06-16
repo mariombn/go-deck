@@ -1,7 +1,8 @@
 import {useCallback, useEffect, useState} from 'react';
-import {ButtonConfig, DeckConfig} from '../types';
+import {ButtonConfig, DeckConfig, OBSConfig} from '../types';
 import DeckGrid from '../components/DeckGrid';
 import ButtonEditor from './ButtonEditor';
+import OBSPanel from './OBSPanel';
 import * as App from '../../wailsjs/go/main/App';
 
 interface NetworkInfo {
@@ -90,6 +91,11 @@ export default function DesktopApp() {
     setConfig({...config, buttons});
     setDirty(true);
     setEditing(null);
+  };
+
+  const setOBS = (obs: OBSConfig) => {
+    setConfig({...config, integrations: {...config.integrations, obs}});
+    setDirty(true);
   };
 
   const deleteButton = () => {
@@ -206,6 +212,13 @@ export default function DesktopApp() {
             ⚠️ Sem autenticação: qualquer dispositivo na sua rede local que abrir esta URL pode acionar os botões
             existentes — incluindo abrir programas e URLs configurados — no seu PC.
           </div>
+
+          <OBSPanel
+            value={
+              config.integrations?.obs ?? {enabled: false, host: 'localhost', port: 4455, password: ''}
+            }
+            onChange={setOBS}
+          />
         </aside>
       </div>
 

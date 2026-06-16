@@ -25,12 +25,13 @@ A CLI do Wails é instalada via `go install` e fica em `$GOPATH/bin` (ex.: `C:\U
 **Fonte da verdade da config.** `internal/config.Store` (thread-safe) é a única fonte, persistida em `%APPDATA%/DeckPilot/config.json`. O **desktop** lê/escreve via bindings; o **celular** é read-only + envia `press` pelo WS. `App.SaveConfig` persiste **e** faz broadcast do novo config a todos os celulares conectados.
 
 **Caminho crítico de um toque:**
-`celular → WS {type:"press",buttonId} → server.press → Store.FindButton → action.Spec.Build() → Action.Execute(ExecContext{Input, Launcher}) → SendKeys / Launch / OpenURL`.
+`celular → WS {type:"press",buttonId} → server.press → Store.FindButton → action.Spec.Build() → Action.Execute(ExecContext{Input, Launcher, OBS}) → SendKeys / Launch / OpenURL / OBS.*`.
 
 **Camadas isoladas por interface (para SO futuro):**
 - `InputController` (`internal/input`) — implementação Windows é **`SendInput` em Go puro, sem CGO** (`sendinput_windows.go`); outros SOs são stub (`sendinput_other.go`). O vocabulário de teclas vive em `keymap.go`.
 - `Launcher` (`internal/launch`) — abre programas/URLs (`os/exec`, **sem shell**); Windows (`launcher_windows.go`) usa `exec.Command` para `launch` e `rundll32 url.dll` para `url`; outros SOs são stub. Mesmo padrão do `InputController`.
-- `Action` (`internal/action`) — polimórfico via `Spec.Build()`. Tipos: `keypress`, `launch`, `url`, `sequence` (lista de ações em ordem, aninhável até `maxSequenceDepth`=10, **aborta no 1º erro**). `Spec` é um struct **chato** (todos os campos `omitempty`); cada tipo usa só os seus. As ações recebem um `ExecContext{Input, Launcher}` em `Execute` — adicionar uma capacidade nova = novo campo no `ExecContext`, sem mudar a assinatura. Adicionar tipos = nova implementação, sem refatorar o resto.
+- `obs.Controller` (`internal/obs`) — controla o OBS Studio via **obs-websocket v5** (lib `goobs`, Go puro). É **rede pura** (não depende do SO), então tem **uma implementação só** (sem arquivos por SO). **Conecta por toque** (dial→request→fecha), com timeouts; não importa `config` (evita ciclo — o mapeamento `config.OBSConfig → obs.Settings` vive em `server.obsSettings`).
+- `Action` (`internal/action`) — polimórfico via `Spec.Build()`. Tipos: `keypress`, `launch`, `url`, `sequence` (lista de ações em ordem, aninhável até `maxSequenceDepth`=10, **aborta no 1º erro**), `obs` (`obsOp` + `target`) e `discord` (mute/deafen — **é keypress por baixo**, dispara o keybind global do Discord; o `discordOp` é só rótulo/UI). `Spec` é um struct **chato** (todos os campos `omitempty`); cada tipo usa só os seus. As ações recebem um `ExecContext{Input, Launcher, OBS}` em `Execute` — adicionar uma capacidade nova = novo campo no `ExecContext`, sem mudar a assinatura. Adicionar tipos = nova implementação, sem refatorar o resto.
 
 **Dev vs. prod no servidor de assets** (build tags, casados com a tag `dev` do Wails):
 - `assets_dev.go` (`//go:build dev`) — reverse-proxy para o Vite em `127.0.0.1:5173`.
@@ -48,5 +49,7 @@ A CLI do Wails é instalada via `go install` e fica em `$GOPATH/bin` (ex.: `C:\U
 - Porta padrão **8754**, lida na inicialização (trocar exige reiniciar). Porta ocupada ⇒ erro explícito, sem fallback.
 - **Sem auth/HTTPS** (POC): só validação de `Origin` no upgrade do WS. Qualquer um na LAN pode acionar botões. **Com `launch`, isso vira execução de processos**: quem está na LAN dispara os botões já configurados (abre os programas/URLs definidos no desktop). O celular só envia **id de botão**, nunca um `path` — o `path`/`url` só é definido no editor desktop. Risco aceito na POC; mitigação real depende do item "Token de autenticação no QR".
 - `main.tsx` tem um overlay que exibe qualquer erro de runtime na tela (útil debugando no celular, sem devtools).
+- **OBS:** conexão em `DeckConfig.Integrations.OBS` (`{enabled,host,port=4455,password}`), editada no painel lateral do desktop (com "Testar conexão" via binding `App.TestOBS`). A senha fica no `config.json` em **texto puro** (postura POC). Requer o **WebSocket Server** habilitado no OBS.
+- **Discord não tem API local** de controle do próprio cliente: a action `discord` é só um keypress rotulado. O usuário configura o atalho como **keybind global** no Discord e captura a mesma tecla. Push-to-talk **não** funciona por toque (é segurar) — por isso só mute/deafen.
 
 Próximos passos: ver [docs/kanban.md](docs/kanban.md).

@@ -62,6 +62,13 @@ kanban-plugin: board
 	  por tipo; sequence aninhável (limite 10) abortando no 1º erro. `script`
 	  foi fundido em `launch` (sem shell, `path` + `args`). Editor com seletor
 	  de tipo e testes do `Build()`.
+- [x] Integração com OBS Studio (obs-websocket v5)
+	  Camada `obs.Controller` (lib `goobs`, conexão por toque); action `obs`
+	  com cena/gravação/transmissão/mudo/hotkey; bloco `Integrations.OBS` na
+	  config + painel com "Testar conexão". `ExecContext` ganhou o campo OBS.
+- [x] Action `discord` (mute/deafen)
+	  Keypress rotulado para os keybinds globais do Discord (não há API local
+	  de controle do cliente). PTT fica de fora (não casa com toque).
 
 
 

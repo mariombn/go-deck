@@ -25,3 +25,7 @@ export function SetActiveIP(arg1) {
 export function TestKeypress() {
   return window['go']['main']['App']['TestKeypress']();
 }
+
+export function TestOBS(arg1) {
+  return window['go']['main']['App']['TestOBS'](arg1);
+}

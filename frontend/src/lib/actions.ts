@@ -20,6 +20,23 @@ export function actionSummary(action: Action): string {
       return action.url ? '🔗 ' + action.url.replace(/^https?:\/\//, '') : '🔗 —';
     case 'sequence':
       return `⛓ ${action.steps.length} passo${action.steps.length === 1 ? '' : 's'}`;
+    case 'obs':
+      switch (action.obsOp) {
+        case 'scene':
+          return '🎬 ' + (action.target || '—');
+        case 'toggle_record':
+          return '⏺ Gravação';
+        case 'toggle_stream':
+          return '📡 Transmissão';
+        case 'toggle_mute':
+          return '🔇 ' + (action.target || '—');
+        case 'hotkey':
+          return '⌨ ' + (action.target || '—');
+        default:
+          return 'OBS';
+      }
+    case 'discord':
+      return action.discordOp === 'deafen' ? '🎧 Deafen' : '🎙 Mute';
     default:
       return '';
   }

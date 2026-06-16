@@ -5,9 +5,19 @@ export type KeypressAction = { type: 'keypress'; keys: string[] };
 export type LaunchAction = { type: 'launch'; path: string; args?: string[] };
 export type UrlAction = { type: 'url'; url: string };
 
+// OBS Studio (obs-websocket). Operações scene/toggle_mute/hotkey usam target;
+// os toggles de gravação/transmissão não.
+export type ObsOp = 'scene' | 'toggle_record' | 'toggle_stream' | 'toggle_mute' | 'hotkey';
+export type ObsAction = { type: 'obs'; obsOp: ObsOp; target?: string };
+
+// Discord: por baixo é keypress (dispara o keybind global do Discord). O
+// discordOp é só rótulo/UI.
+export type DiscordOp = 'mute' | 'deafen';
+export type DiscordAction = { type: 'discord'; discordOp: DiscordOp; keys: string[] };
+
 // Passos de um sequence: qualquer ação que não seja outro sequence (o editor
 // não expõe aninhamento, embora o backend aceite-o vindo do config.json).
-export type StepAction = KeypressAction | LaunchAction | UrlAction;
+export type StepAction = KeypressAction | LaunchAction | UrlAction | ObsAction | DiscordAction;
 export type SequenceAction = { type: 'sequence'; steps: StepAction[] };
 
 export type Action = StepAction | SequenceAction;
@@ -34,9 +44,21 @@ export interface ServerConfig {
   port: number;
 }
 
+export interface OBSConfig {
+  enabled: boolean;
+  host: string;
+  port: number;
+  password: string;
+}
+
+export interface Integrations {
+  obs: OBSConfig;
+}
+
 export interface DeckConfig {
   grid: Grid;
   server: ServerConfig;
+  integrations: Integrations;
   buttons: ButtonConfig[];
 }
 

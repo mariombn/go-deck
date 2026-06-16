@@ -27,6 +27,23 @@ type Server struct {
 	Port int `json:"port"`
 }
 
+// OBSConfig são os dados de conexão do obs-websocket (uma instância de OBS,
+// reaproveitada por todas as ações do tipo "obs"). Senha em texto puro —
+// coerente com a postura POC (ver CLAUDE.md).
+type OBSConfig struct {
+	Enabled  bool   `json:"enabled"`
+	Host     string `json:"host"`
+	Port     int    `json:"port"`
+	Password string `json:"password"`
+}
+
+// Integrations agrupa as configurações de softwares externos controlados pelo
+// deck. Hoje só OBS; Discord é tratado como keypress (keybind global) e não
+// precisa de conexão.
+type Integrations struct {
+	OBS OBSConfig `json:"obs"`
+}
+
 // Position é a célula de um botão no grid.
 type Position struct {
 	Row int `json:"row"`
@@ -44,16 +61,20 @@ type Button struct {
 // DeckConfig é a configuração completa, espelhada nos tipos TypeScript do
 // frontend e enviada ao celular via WebSocket.
 type DeckConfig struct {
-	Grid    Grid     `json:"grid"`
-	Server  Server   `json:"server"`
-	Buttons []Button `json:"buttons"`
+	Grid         Grid         `json:"grid"`
+	Server       Server       `json:"server"`
+	Integrations Integrations `json:"integrations"`
+	Buttons      []Button     `json:"buttons"`
 }
 
 // Default devolve a configuração inicial (grid 5x3, porta 8754, sem botões).
 func Default() DeckConfig {
 	return DeckConfig{
-		Grid:    Grid{Rows: 3, Cols: 5},
-		Server:  Server{Port: 8754},
+		Grid:   Grid{Rows: 3, Cols: 5},
+		Server: Server{Port: 8754},
+		Integrations: Integrations{
+			OBS: OBSConfig{Host: "localhost", Port: 4455},
+		},
 		Buttons: []Button{},
 	}
 }
@@ -154,6 +175,12 @@ func (s *Store) normalize() {
 	}
 	if s.cfg.Server.Port <= 0 {
 		s.cfg.Server.Port = Default().Server.Port
+	}
+	if s.cfg.Integrations.OBS.Host == "" {
+		s.cfg.Integrations.OBS.Host = Default().Integrations.OBS.Host
+	}
+	if s.cfg.Integrations.OBS.Port <= 0 {
+		s.cfg.Integrations.OBS.Port = Default().Integrations.OBS.Port
 	}
 	if s.cfg.Buttons == nil {
 		s.cfg.Buttons = []Button{}

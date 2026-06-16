@@ -18,6 +18,7 @@ import (
 	"go-deck/internal/config"
 	"go-deck/internal/input"
 	"go-deck/internal/launch"
+	"go-deck/internal/obs"
 )
 
 // Server orquestra HTTP + WebSocket + descoberta de IP + QR Code.
@@ -144,12 +145,28 @@ func (s *Server) press(buttonID string) (bool, string) {
 	if err != nil {
 		return false, err.Error()
 	}
-	ctx := action.ExecContext{Input: s.input, Launcher: s.launcher}
+	cfg := s.store.Get()
+	ctx := action.ExecContext{
+		Input:    s.input,
+		Launcher: s.launcher,
+		OBS:      obs.New(obsSettings(cfg.Integrations.OBS)),
+	}
 	if err := act.Execute(ctx); err != nil {
 		return false, err.Error()
 	}
 	logf("press %s (%s) -> %s", buttonID, btn.Label, btn.Action.Type)
 	return true, ""
+}
+
+// obsSettings traduz a config persistida em settings de conexão do pacote
+// obs. (obs não importa config para evitar ciclo de dependência.)
+func obsSettings(c config.OBSConfig) obs.Settings {
+	return obs.Settings{
+		Enabled:  c.Enabled,
+		Host:     c.Host,
+		Port:     c.Port,
+		Password: c.Password,
+	}
 }
 
 // BroadcastConfig envia a config atual para todos os celulares conectados.
@@ -163,6 +180,13 @@ func (s *Server) configMessage() []byte {
 		Payload config.DeckConfig `json:"payload"`
 	}{Type: "config", Payload: s.store.Get()})
 	return msg
+}
+
+// TestOBS tenta conectar ao OBS com as settings dadas (sem persistir),
+// devolvendo erro em caso de falha. Usado pelo botão "Testar conexão" do
+// editor desktop.
+func (s *Server) TestOBS(c config.OBSConfig) error {
+	return obs.New(obsSettings(c)).Ping()
 }
 
 // SetActiveIP escolhe qual IP a URL/QR usa (dropdown do desktop).

@@ -26,6 +26,9 @@ func TestBuildValidTypes(t *testing.T) {
 		{"launch", Spec{Type: "launch", Path: `C:\Windows\notepad.exe`, Args: []string{"x"}}, LaunchAction{}},
 		{"url", Spec{Type: "url", URL: "https://example.com"}, URLAction{}},
 		{"sequence", Spec{Type: "sequence", Steps: []Spec{{Type: "keypress", Keys: []string{"a"}}}}, SequenceAction{}},
+		{"obs scene", Spec{Type: "obs", ObsOp: ObsOpScene, Target: "Cena 1"}, OBSAction{}},
+		{"obs toggle_record", Spec{Type: "obs", ObsOp: ObsOpToggleRecord}, OBSAction{}},
+		{"discord", Spec{Type: "discord", DiscordOp: "mute", Keys: []string{"ctrl", "shift", "m"}}, KeypressAction{}},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -50,6 +53,11 @@ func TestBuildValidationErrors(t *testing.T) {
 		{"launch sem path", Spec{Type: "launch"}, "sem caminho"},
 		{"url vazia", Spec{Type: "url"}, "url vazia"},
 		{"sequence sem passos", Spec{Type: "sequence"}, "sem passos"},
+		{"obs sem operação", Spec{Type: "obs"}, "sem operação"},
+		{"obs op inválida", Spec{Type: "obs", ObsOp: "explodir"}, "desconhecida"},
+		{"obs scene sem alvo", Spec{Type: "obs", ObsOp: ObsOpScene}, "sem alvo"},
+		{"obs mute sem alvo", Spec{Type: "obs", ObsOp: ObsOpToggleMute}, "sem alvo"},
+		{"discord sem teclas", Spec{Type: "discord", DiscordOp: "mute"}, "sem teclas"},
 		{"tipo desconhecido", Spec{Type: "frobnicate"}, "desconhecido"},
 	}
 	for _, tc := range cases {
@@ -97,6 +105,53 @@ func TestBuildNestingExceedsLimit(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "aninhado demais") {
 		t.Fatalf("erro = %q, esperava conter 'aninhado demais'", err.Error())
+	}
+}
+
+// fakeOBS registra a última chamada feita, para checar o dispatch.
+type fakeOBS struct {
+	call   string
+	target string
+}
+
+func (f *fakeOBS) SetScene(name string) error      { f.call, f.target = "scene", name; return nil }
+func (f *fakeOBS) ToggleRecord() error             { f.call = "record"; return nil }
+func (f *fakeOBS) ToggleStream() error             { f.call = "stream"; return nil }
+func (f *fakeOBS) ToggleMute(input string) error   { f.call, f.target = "mute", input; return nil }
+func (f *fakeOBS) TriggerHotkey(name string) error { f.call, f.target = "hotkey", name; return nil }
+func (f *fakeOBS) Ping() error                     { f.call = "ping"; return nil }
+
+func TestOBSActionDispatch(t *testing.T) {
+	cases := []struct {
+		op         string
+		target     string
+		wantCall   string
+		wantTarget string
+	}{
+		{ObsOpScene, "Cena 1", "scene", "Cena 1"},
+		{ObsOpToggleRecord, "", "record", ""},
+		{ObsOpToggleStream, "", "stream", ""},
+		{ObsOpToggleMute, "Mic/Aux", "mute", "Mic/Aux"},
+		{ObsOpHotkey, "OBSBasic.StartRecording", "hotkey", "OBSBasic.StartRecording"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.op, func(t *testing.T) {
+			fake := &fakeOBS{}
+			err := OBSAction{Op: tc.op, Target: tc.target}.Execute(ExecContext{OBS: fake})
+			if err != nil {
+				t.Fatalf("Execute erro: %v", err)
+			}
+			if fake.call != tc.wantCall || fake.target != tc.wantTarget {
+				t.Fatalf("dispatch = (%q,%q), quero (%q,%q)", fake.call, fake.target, tc.wantCall, tc.wantTarget)
+			}
+		})
+	}
+}
+
+func TestOBSActionNilController(t *testing.T) {
+	err := OBSAction{Op: ObsOpToggleRecord}.Execute(ExecContext{})
+	if err == nil {
+		t.Fatal("Execute sem ctx.OBS deveria falhar")
 	}
 }
 

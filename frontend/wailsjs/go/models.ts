@@ -7,6 +7,9 @@ export namespace action {
 	    args?: string[];
 	    url?: string;
 	    steps?: Spec[];
+	    obsOp?: string;
+	    target?: string;
+	    discordOp?: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new Spec(source);
@@ -20,6 +23,9 @@ export namespace action {
 	        this.args = source["args"];
 	        this.url = source["url"];
 	        this.steps = this.convertValues(source["steps"], Spec);
+	        this.obsOp = source["obsOp"];
+	        this.target = source["target"];
+	        this.discordOp = source["discordOp"];
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
@@ -95,6 +101,54 @@ export namespace config {
 		    return a;
 		}
 	}
+	export class OBSConfig {
+	    enabled: boolean;
+	    host: string;
+	    port: number;
+	    password: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new OBSConfig(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.enabled = source["enabled"];
+	        this.host = source["host"];
+	        this.port = source["port"];
+	        this.password = source["password"];
+	    }
+	}
+	export class Integrations {
+	    obs: OBSConfig;
+	
+	    static createFrom(source: any = {}) {
+	        return new Integrations(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.obs = this.convertValues(source["obs"], OBSConfig);
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
 	export class Server {
 	    port: number;
 	
@@ -124,6 +178,7 @@ export namespace config {
 	export class DeckConfig {
 	    grid: Grid;
 	    server: Server;
+	    integrations: Integrations;
 	    buttons: Button[];
 	
 	    static createFrom(source: any = {}) {
@@ -134,6 +189,7 @@ export namespace config {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.grid = this.convertValues(source["grid"], Grid);
 	        this.server = this.convertValues(source["server"], Server);
+	        this.integrations = this.convertValues(source["integrations"], Integrations);
 	        this.buttons = this.convertValues(source["buttons"], Button);
 	    }
 	
@@ -155,6 +211,8 @@ export namespace config {
 		    return a;
 		}
 	}
+	
+	
 	
 	
 
