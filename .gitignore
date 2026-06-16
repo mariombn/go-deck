@@ -18,6 +18,9 @@ config.json
 # Ferramentas do Claude Code (não fazem parte do projeto)
 .claude/
 
+# Obsidian (config/estado local do editor + binário do plugin)
+.obsidian/
+
 # Editores / IDEs
 .idea/
 .vscode/
