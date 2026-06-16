@@ -5,6 +5,8 @@ import ActionFields, {isActionValid} from './ActionFields';
 interface Props {
   draft: ButtonConfig;
   isNew: boolean;
+  // Páginas (id+nome) disponíveis como destino de uma ação 'navigate'.
+  pages: {id: string; name: string}[];
   onSave: (button: ButtonConfig) => void;
   onDelete: () => void;
   onCancel: () => void;
@@ -13,7 +15,7 @@ interface Props {
 // ButtonEditor é o modal de criação/edição de um botão (label + ação). A
 // ação pode ser de qualquer tipo (keypress, launch, url, sequence) via
 // ActionFields.
-export default function ButtonEditor({draft, isNew, onSave, onDelete, onCancel}: Props) {
+export default function ButtonEditor({draft, isNew, pages, onSave, onDelete, onCancel}: Props) {
   const [label, setLabel] = useState(draft.label);
   const [action, setAction] = useState<Action>(draft.action);
 
@@ -40,7 +42,7 @@ export default function ButtonEditor({draft, isNew, onSave, onDelete, onCancel}:
           className="mb-4 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 outline-none focus:border-indigo-500"
         />
 
-        <ActionFields value={action} onChange={setAction} />
+        <ActionFields value={action} onChange={setAction} pages={pages} />
 
         <div className="mt-6 flex items-center justify-between">
           {!isNew ? (

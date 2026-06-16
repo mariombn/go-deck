@@ -17,7 +17,6 @@ kanban-plugin: board
 
 - [ ] Ícones/imagens nos botões
 - [ ] Reordenação drag-and-drop dos botões
-- [ ] Perfis múltiplos
 - [ ] Suporte a macOS
 	  `CGEvent` + permissão de Acessibilidade, atrás do mesmo `InputController`.
 - [ ] Suporte a Linux
@@ -69,6 +68,11 @@ kanban-plugin: board
 - [x] Action `discord` (mute/deafen)
 	  Keypress rotulado para os keybinds globais do Discord (não há API local
 	  de controle do cliente). PTT fica de fora (não casa com toque).
+- [x] Múltiplos grids (páginas) + navegação entre eles
+	  `DeckConfig.Pages` (cada um com tamanho próprio); migração do formato
+	  antigo; ids de botão únicos no deck inteiro. Action `navigate`
+	  (client-side) + botão Home no celular; abas laterais nomeáveis no
+	  editor. Cobre o antigo item "Perfis múltiplos" numa forma mais leve.
 
 
 

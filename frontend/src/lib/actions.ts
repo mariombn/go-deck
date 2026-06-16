@@ -37,6 +37,8 @@ export function actionSummary(action: Action): string {
       }
     case 'discord':
       return action.discordOp === 'deafen' ? '🎧 Deafen' : '🎙 Mute';
+    case 'navigate':
+      return '➡ Ir para grid';
     default:
       return '';
   }

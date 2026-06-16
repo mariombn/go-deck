@@ -1,5 +1,5 @@
 import {useEffect, useRef, useState, useCallback} from 'react';
-import {DeckConfig, ServerMessage} from '../types';
+import {ButtonConfig, DeckConfig, ServerMessage} from '../types';
 import DeckGrid from '../components/DeckGrid';
 
 type ConnStatus = 'connecting' | 'connected' | 'reconnecting';
@@ -24,9 +24,15 @@ function useOrientation(): boolean {
 
 export default function MobileApp() {
   const [config, setConfig] = useState<DeckConfig | null>(null);
+  const [currentPageId, setCurrentPageId] = useState<string>('');
   const [status, setStatus] = useState<ConnStatus>('connecting');
   const [flash, setFlash] = useState<Record<string, 'ok' | 'err'>>({});
   const [toast, setToast] = useState<string | null>(null);
+
+  const showToast = useCallback((text: string) => {
+    setToast(text);
+    window.setTimeout(() => setToast(null), 2500);
+  }, []);
 
   const wsRef = useRef<WebSocket | null>(null);
   const retryRef = useRef(0);
@@ -94,18 +100,52 @@ export default function MobileApp() {
     }
   };
 
+  const pages = config?.pages ?? [];
+  // Página atual com fallback à primeira (cobre id ausente ou página apagada
+  // numa atualização de config vinda do desktop).
+  const currentPage = pages.find((p) => p.id === currentPageId) ?? pages[0];
+
+  // Toque numa célula: navigate troca de página localmente (sem press); as
+  // demais ações vão ao PC pelo WS.
+  const onCell = (_r: number, _c: number, button: ButtonConfig | null) => {
+    if (!button) return;
+    if (button.action.type === 'navigate') {
+      const {targetPage} = button.action;
+      const target = pages.find((p) => p.id === targetPage);
+      if (target) setCurrentPageId(target.id);
+      else showToast('grid de destino não encontrado');
+      return;
+    }
+    press(button.id);
+  };
+
   return (
     <div className="flex min-h-full flex-col bg-slate-900 text-slate-100">
-      <StatusBar status={status} />
+      <div className="flex items-center justify-between px-2">
+        <StatusBar status={status} />
+        {pages.length > 1 && currentPage && (
+          <div className="flex items-center gap-2 px-2">
+            <span className="text-xs text-slate-400">{currentPage.name}</span>
+            <button
+              onClick={() => setCurrentPageId(pages[0].id)}
+              disabled={currentPage.id === pages[0].id}
+              className="rounded-md bg-slate-700 px-2 py-1 text-xs hover:bg-slate-600 disabled:opacity-30"
+              title="Voltar ao primeiro grid"
+            >
+              ⌂ Home
+            </button>
+          </div>
+        )}
+      </div>
       <main className="flex flex-1 items-center justify-center p-4">
-        {config ? (
+        {currentPage ? (
           <div className="w-full max-w-2xl">
             <DeckGrid
-              config={config}
+              page={currentPage}
               mode="mobile"
               transpose={portrait}
               flash={flash}
-              onCellClick={(_r, _c, button) => button && press(button.id)}
+              onCellClick={onCell}
             />
           </div>
         ) : (

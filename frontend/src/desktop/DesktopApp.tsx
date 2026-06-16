@@ -1,5 +1,5 @@
 import {useCallback, useEffect, useState} from 'react';
-import {ButtonConfig, DeckConfig, OBSConfig} from '../types';
+import {ButtonConfig, DeckConfig, OBSConfig, Page} from '../types';
 import DeckGrid from '../components/DeckGrid';
 import ButtonEditor from './ButtonEditor';
 import OBSPanel from './OBSPanel';
@@ -20,8 +20,18 @@ interface Editing {
   isNew: boolean;
 }
 
+// newPageId gera um id de página no frontend. Exceção consciente à regra
+// "ids só no Go": uma ação 'navigate' precisa referenciar uma página recém-
+// criada antes de salvar. O backend preserva ids não-vazios e únicos.
+function newPageId(): string {
+  const a = new Uint8Array(3);
+  crypto.getRandomValues(a);
+  return 'page_' + Array.from(a, (b) => b.toString(16).padStart(2, '0')).join('');
+}
+
 export default function DesktopApp() {
   const [config, setConfig] = useState<DeckConfig | null>(null);
+  const [activePageId, setActivePageId] = useState<string>('');
   const [dirty, setDirty] = useState(false);
   const [network, setNetwork] = useState<NetworkInfo | null>(null);
   const [qr, setQr] = useState<string>('');
@@ -42,6 +52,7 @@ export default function DesktopApp() {
     (async () => {
       const cfg = (await App.GetConfig()) as unknown as DeckConfig;
       setConfig(cfg);
+      setActivePageId(cfg.pages[0]?.id ?? '');
       await refreshNetwork();
     })();
   }, [refreshNetwork]);
@@ -50,26 +61,56 @@ export default function DesktopApp() {
     return <div className="flex h-full items-center justify-center bg-slate-900 text-slate-400">Carregando…</div>;
   }
 
-  // --- edição de grid ---
+  const pages = config.pages ?? [];
+  const activePage = pages.find((p) => p.id === activePageId) ?? pages[0];
+  if (!activePage) {
+    return <div className="flex h-full items-center justify-center bg-slate-900 text-slate-400">Sem páginas.</div>;
+  }
+
+  // replacePage troca a página ativa por uma nova versão (imutável) e marca sujo.
+  const replaceActivePage = (next: Page) => {
+    setConfig({...config, pages: pages.map((p) => (p.id === activePage.id ? next : p))});
+    setDirty(true);
+  };
+
+  // --- gerência de páginas ---
+  const addPage = () => {
+    const page: Page = {id: newPageId(), name: `Grid ${pages.length + 1}`, grid: {rows: 3, cols: 5}, buttons: []};
+    setConfig({...config, pages: [...pages, page]});
+    setActivePageId(page.id);
+    setDirty(true);
+  };
+
+  const renameActivePage = (name: string) => replaceActivePage({...activePage, name});
+
+  const deleteActivePage = () => {
+    if (pages.length <= 1) return;
+    if (!window.confirm(`Excluir o grid "${activePage.name}" e seus botões?`)) return;
+    const remaining = pages.filter((p) => p.id !== activePage.id);
+    setConfig({...config, pages: remaining});
+    setActivePageId(remaining[0].id);
+    setDirty(true);
+  };
+
+  // --- edição do grid da página ativa ---
   const applyGrid = (rows: number, cols: number) => {
     rows = Math.max(1, Math.min(MAX_DIM, rows || 1));
     cols = Math.max(1, Math.min(MAX_DIM, cols || 1));
-    const orphans = config.buttons.filter((b) => b.position.row >= rows || b.position.col >= cols);
+    const orphans = activePage.buttons.filter((b) => b.position.row >= rows || b.position.col >= cols);
     if (orphans.length > 0) {
       const ok = window.confirm(
         `${orphans.length} botão(ões) ficam fora do novo grid e serão removidos. Continuar?`
       );
       if (!ok) return;
     }
-    setConfig({
-      ...config,
+    replaceActivePage({
+      ...activePage,
       grid: {rows, cols},
-      buttons: config.buttons.filter((b) => b.position.row < rows && b.position.col < cols),
+      buttons: activePage.buttons.filter((b) => b.position.row < rows && b.position.col < cols),
     });
-    setDirty(true);
   };
 
-  // --- CRUD de botões ---
+  // --- CRUD de botões (na página ativa) ---
   const openCell = (row: number, col: number, button: ButtonConfig | null) => {
     if (button) {
       setEditing({draft: button, isNew: false});
@@ -82,14 +123,16 @@ export default function DesktopApp() {
   };
 
   const saveButton = (button: ButtonConfig) => {
-    let buttons: ButtonConfig[];
-    if (editing?.isNew) {
-      buttons = [...config.buttons, button];
-    } else {
-      buttons = config.buttons.map((b) => (b.id === button.id ? button : b));
-    }
-    setConfig({...config, buttons});
-    setDirty(true);
+    const buttons = editing?.isNew
+      ? [...activePage.buttons, button]
+      : activePage.buttons.map((b) => (b.id === button.id ? button : b));
+    replaceActivePage({...activePage, buttons});
+    setEditing(null);
+  };
+
+  const deleteButton = () => {
+    if (!editing) return;
+    replaceActivePage({...activePage, buttons: activePage.buttons.filter((b) => b.id !== editing.draft.id)});
     setEditing(null);
   };
 
@@ -98,17 +141,14 @@ export default function DesktopApp() {
     setDirty(true);
   };
 
-  const deleteButton = () => {
-    if (!editing) return;
-    setConfig({...config, buttons: config.buttons.filter((b) => b.id !== editing.draft.id)});
-    setDirty(true);
-    setEditing(null);
-  };
-
   // --- persistência ---
   const save = async () => {
     const saved = (await App.SaveConfig(config as any)) as unknown as DeckConfig;
     setConfig(saved);
+    // Mantém a página ativa se ainda existir; senão volta à primeira.
+    if (!saved.pages.some((p) => p.id === activePageId)) {
+      setActivePageId(saved.pages[0]?.id ?? '');
+    }
     setDirty(false);
     setSaveMsg('Salvo ✓');
     window.setTimeout(() => setSaveMsg(''), 2000);
@@ -141,7 +181,47 @@ export default function DesktopApp() {
       </header>
 
       <div className="flex flex-1 overflow-hidden">
-        {/* Editor de grid */}
+        {/* Abas laterais de grids (páginas) */}
+        <nav className="w-44 shrink-0 overflow-auto border-r border-slate-800 p-3">
+          <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Grids</h2>
+          <div className="space-y-1">
+            {pages.map((p) =>
+              p.id === activePage.id ? (
+                <div key={p.id} className="rounded-lg bg-indigo-600/20 p-2 ring-1 ring-indigo-500">
+                  <input
+                    value={p.name}
+                    onChange={(e) => renameActivePage(e.target.value)}
+                    placeholder="Nome do grid"
+                    className="w-full bg-transparent text-sm font-medium outline-none placeholder:text-slate-500"
+                  />
+                  <button
+                    onClick={deleteActivePage}
+                    disabled={pages.length <= 1}
+                    className="mt-1 text-xs text-red-400 hover:underline disabled:opacity-30"
+                  >
+                    excluir
+                  </button>
+                </div>
+              ) : (
+                <button
+                  key={p.id}
+                  onClick={() => setActivePageId(p.id)}
+                  className="block w-full truncate rounded-lg px-2 py-2 text-left text-sm text-slate-300 hover:bg-slate-800"
+                >
+                  {p.name || '(sem nome)'}
+                </button>
+              )
+            )}
+          </div>
+          <button
+            onClick={addPage}
+            className="mt-2 w-full rounded-lg border border-dashed border-slate-600 px-2 py-2 text-xs text-slate-300 hover:border-indigo-500 hover:text-indigo-300"
+          >
+            + Novo grid
+          </button>
+        </nav>
+
+        {/* Editor do grid ativo */}
         <section className="flex-1 overflow-auto p-6">
           <div className="mb-4 flex items-center gap-4">
             <label className="text-sm text-slate-400">
@@ -150,8 +230,8 @@ export default function DesktopApp() {
                 type="number"
                 min={1}
                 max={MAX_DIM}
-                value={config.grid.rows}
-                onChange={(e) => applyGrid(parseInt(e.target.value, 10), config.grid.cols)}
+                value={activePage.grid.rows}
+                onChange={(e) => applyGrid(parseInt(e.target.value, 10), activePage.grid.cols)}
                 className="ml-2 w-16 rounded border border-slate-700 bg-slate-800 px-2 py-1"
               />
             </label>
@@ -161,8 +241,8 @@ export default function DesktopApp() {
                 type="number"
                 min={1}
                 max={MAX_DIM}
-                value={config.grid.cols}
-                onChange={(e) => applyGrid(config.grid.rows, parseInt(e.target.value, 10))}
+                value={activePage.grid.cols}
+                onChange={(e) => applyGrid(activePage.grid.rows, parseInt(e.target.value, 10))}
                 className="ml-2 w-16 rounded border border-slate-700 bg-slate-800 px-2 py-1"
               />
             </label>
@@ -170,7 +250,7 @@ export default function DesktopApp() {
           </div>
 
           <div className="mx-auto max-w-3xl">
-            <DeckGrid config={config} mode="desktop" onCellClick={openCell} />
+            <DeckGrid page={activePage} mode="desktop" onCellClick={openCell} />
           </div>
         </section>
 
@@ -226,6 +306,7 @@ export default function DesktopApp() {
         <ButtonEditor
           draft={editing.draft}
           isNew={editing.isNew}
+          pages={pages.map((p) => ({id: p.id, name: p.name}))}
           onSave={saveButton}
           onDelete={deleteButton}
           onCancel={() => setEditing(null)}

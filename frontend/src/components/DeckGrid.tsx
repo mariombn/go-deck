@@ -1,8 +1,8 @@
-import {ButtonConfig, DeckConfig} from '../types';
+import {ButtonConfig, Page} from '../types';
 import DeckButton from './DeckButton';
 
 interface Props {
-  config: DeckConfig;
+  page: Page;
   mode: 'mobile' | 'desktop';
   // transpose: no celular em portrait, o grid NxM é renderizado como MxN
   // (decisão 10). O modelo de dados permanece intacto; só a renderização troca.
@@ -11,9 +11,9 @@ interface Props {
   onCellClick?: (row: number, col: number, button: ButtonConfig | null) => void;
 }
 
-export default function DeckGrid({config, mode, transpose, flash, onCellClick}: Props) {
-  const {rows, cols} = config.grid;
-  const buttons = config.buttons ?? [];
+export default function DeckGrid({page, mode, transpose, flash, onCellClick}: Props) {
+  const {rows, cols} = page.grid;
+  const buttons = page.buttons ?? [];
   const displayRows = transpose ? cols : rows;
   const displayCols = transpose ? rows : cols;
 

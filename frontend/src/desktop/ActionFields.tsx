@@ -10,9 +10,12 @@ export const ACTION_TYPES: {value: ActionType; label: string}[] = [
   {value: 'url', label: 'Abrir URL'},
   {value: 'obs', label: 'OBS Studio'},
   {value: 'discord', label: 'Discord'},
+  {value: 'navigate', label: 'Ir para outro grid'},
   {value: 'sequence', label: 'Sequência'},
 ];
-export const STEP_TYPES = ACTION_TYPES.filter((t) => t.value !== 'sequence');
+// Passos de sequence excluem 'sequence' (sem aninhamento na UI) e 'navigate'
+// (navegação é client-side, não se mistura com ações executadas no PC).
+export const STEP_TYPES = ACTION_TYPES.filter((t) => t.value !== 'sequence' && t.value !== 'navigate');
 
 // Operações do OBS. targetLabel presente => a operação exige um alvo
 // (cena/fonte/hotkey); ausente => não precisa (toggles).
@@ -45,6 +48,8 @@ export function emptyAction(type: ActionType): Action {
       return {type: 'obs', obsOp: 'scene', target: ''};
     case 'discord':
       return {type: 'discord', discordOp: 'mute', keys: []};
+    case 'navigate':
+      return {type: 'navigate', targetPage: ''};
     case 'sequence':
       return {type: 'sequence', steps: []};
   }
@@ -64,6 +69,8 @@ export function isActionValid(a: Action): boolean {
       return !obsNeedsTarget(a.obsOp) || (a.target ?? '').trim() !== '';
     case 'discord':
       return a.keys.length > 0;
+    case 'navigate':
+      return a.targetPage !== '';
     case 'sequence':
       return a.steps.length > 0 && a.steps.every(isActionValid);
   }
@@ -78,13 +85,16 @@ const textToArgs = (text: string) =>
 interface FieldsProps {
   value: Action;
   onChange: (a: Action) => void;
-  // allowSequence=false nos passos de um sequence (sem aninhamento na UI).
+  // allowSequence=false nos passos de um sequence (sem aninhamento na UI,
+  // que também esconde 'navigate').
   allowSequence?: boolean;
+  // Lista de páginas (id+nome) para o destino de uma ação 'navigate'.
+  pages?: {id: string; name: string}[];
 }
 
 // ActionFields renderiza o seletor de tipo + os campos do tipo selecionado.
 // É reutilizado no nível do botão e em cada passo de um sequence.
-export default function ActionFields({value, onChange, allowSequence = true}: FieldsProps) {
+export default function ActionFields({value, onChange, allowSequence = true, pages = []}: FieldsProps) {
   const types = allowSequence ? ACTION_TYPES : STEP_TYPES;
 
   return (
@@ -204,6 +214,27 @@ export default function ActionFields({value, onChange, allowSequence = true}: Fi
           <p className="rounded-lg bg-amber-500/10 p-2 text-xs text-amber-300">
             O Discord não expõe controle por rede: configure este atalho como <b>keybind global</b> nas
             Configurações → Atalhos de Teclado do Discord e capture aqui a mesma tecla.
+          </p>
+        </div>
+      )}
+
+      {value.type === 'navigate' && (
+        <div>
+          <label className="mb-1 block text-sm text-slate-400">Grid de destino</label>
+          <select
+            value={value.targetPage}
+            onChange={(e) => onChange({type: 'navigate', targetPage: e.target.value})}
+            className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 outline-none focus:border-indigo-500"
+          >
+            <option value="">— selecione —</option>
+            {pages.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name}
+              </option>
+            ))}
+          </select>
+          <p className="mt-2 text-xs text-slate-500">
+            Ao tocar no celular, troca para este grid (não envia nada ao PC).
           </p>
         </div>
       )}

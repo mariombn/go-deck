@@ -58,24 +58,46 @@ type Button struct {
 	Action   action.Spec `json:"action"`
 }
 
+// Page é um grid independente ("área"), com tamanho e botões próprios. O
+// usuário navega entre páginas por botões do tipo "navigate" (tratados no
+// cliente) ou pelo botão Home fixo do celular. O id é estável e referenciado
+// pelas ações de navegação — por isso é gerado no frontend (exceção à regra
+// "ids só no Go", necessária para linkar uma página recém-criada antes de
+// salvar); o backend o preserva, ou atribui um se vier vazio/duplicado.
+type Page struct {
+	ID      string   `json:"id"`
+	Name    string   `json:"name"`
+	Grid    Grid     `json:"grid"`
+	Buttons []Button `json:"buttons"`
+}
+
 // DeckConfig é a configuração completa, espelhada nos tipos TypeScript do
 // frontend e enviada ao celular via WebSocket.
 type DeckConfig struct {
-	Grid         Grid         `json:"grid"`
+	Pages        []Page       `json:"pages"`
 	Server       Server       `json:"server"`
 	Integrations Integrations `json:"integrations"`
-	Buttons      []Button     `json:"buttons"`
+
+	// Campos legados do formato antigo (grid único). Mantidos apenas para
+	// migrar config.json pré-páginas; em normalize viram a primeira Page e
+	// são zerados (omitempty) para não reaparecerem no arquivo.
+	LegacyGrid    *Grid    `json:"grid,omitempty"`
+	LegacyButtons []Button `json:"buttons,omitempty"`
 }
 
-// Default devolve a configuração inicial (grid 5x3, porta 8754, sem botões).
+// Default devolve a configuração inicial: uma página "Principal" 3x5, porta
+// 8754, sem botões.
 func Default() DeckConfig {
 	return DeckConfig{
-		Grid:   Grid{Rows: 3, Cols: 5},
+		Pages: []Page{{
+			Name:    "Principal",
+			Grid:    Grid{Rows: 3, Cols: 5},
+			Buttons: []Button{},
+		}},
 		Server: Server{Port: 8754},
 		Integrations: Integrations{
 			OBS: OBSConfig{Host: "localhost", Port: 4455},
 		},
-		Buttons: []Button{},
 	}
 }
 
@@ -150,13 +172,16 @@ func (s *Store) Replace(cfg DeckConfig) (DeckConfig, error) {
 	return s.clone(), nil
 }
 
-// FindButton procura um botão pelo id.
+// FindButton procura um botão pelo id em todas as páginas (os ids são únicos
+// no deck inteiro).
 func (s *Store) FindButton(id string) (Button, bool) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	for _, b := range s.cfg.Buttons {
-		if b.ID == id {
-			return b, true
+	for _, p := range s.cfg.Pages {
+		for _, b := range p.Buttons {
+			if b.ID == id {
+				return b, true
+			}
 		}
 	}
 	return Button{}, false
@@ -164,15 +189,13 @@ func (s *Store) FindButton(id string) (Button, bool) {
 
 // --- helpers internos (assumem lock já adquirido quando necessário) ---
 
-// normalize aplica regras de integridade: defaults de grid/porta, dropar
-// botões fora do grid (órfãos após encolher) e garantir slice não-nil.
+// normalize aplica regras de integridade: migra o formato antigo, garante ao
+// menos uma página, normaliza defaults de servidor/OBS, e — por página —
+// aplica defaults de grid e dropa botões órfãos. Os ids de página e de botão
+// são únicos no deck inteiro (atribuídos quando vazios/duplicados).
 func (s *Store) normalize() {
-	if s.cfg.Grid.Rows <= 0 {
-		s.cfg.Grid.Rows = Default().Grid.Rows
-	}
-	if s.cfg.Grid.Cols <= 0 {
-		s.cfg.Grid.Cols = Default().Grid.Cols
-	}
+	s.migrateLegacy()
+
 	if s.cfg.Server.Port <= 0 {
 		s.cfg.Server.Port = Default().Server.Port
 	}
@@ -182,34 +205,77 @@ func (s *Store) normalize() {
 	if s.cfg.Integrations.OBS.Port <= 0 {
 		s.cfg.Integrations.OBS.Port = Default().Integrations.OBS.Port
 	}
-	if s.cfg.Buttons == nil {
-		s.cfg.Buttons = []Button{}
+
+	// Sempre ao menos uma página.
+	if len(s.cfg.Pages) == 0 {
+		s.cfg.Pages = Default().Pages
 	}
-	kept := s.cfg.Buttons[:0]
-	used := map[string]bool{}
-	for _, b := range s.cfg.Buttons {
-		// Dropa órfãos (botões fora do grid após encolher).
-		if b.Position.Row < 0 || b.Position.Row >= s.cfg.Grid.Rows ||
-			b.Position.Col < 0 || b.Position.Col >= s.cfg.Grid.Cols {
-			continue
+
+	pageIDs := map[string]bool{}  // unicidade de ids de página
+	btnIDs := map[string]bool{}   // unicidade de ids de botão (deck inteiro)
+	for pi := range s.cfg.Pages {
+		p := &s.cfg.Pages[pi]
+		if p.ID == "" || pageIDs[p.ID] {
+			p.ID = newID("page_", pageIDs)
 		}
-		// Atribui id no backend a botões novos (id vazio) — o frontend nunca
-		// inventa ids. Garante unicidade dentro do conjunto.
-		if b.ID == "" || used[b.ID] {
-			b.ID = newButtonID(used)
+		pageIDs[p.ID] = true
+		if p.Name == "" {
+			p.Name = fmt.Sprintf("Grid %d", pi+1)
 		}
-		used[b.ID] = true
-		kept = append(kept, b)
+		if p.Grid.Rows <= 0 {
+			p.Grid.Rows = Default().Pages[0].Grid.Rows
+		}
+		if p.Grid.Cols <= 0 {
+			p.Grid.Cols = Default().Pages[0].Grid.Cols
+		}
+		if p.Buttons == nil {
+			p.Buttons = []Button{}
+		}
+		kept := p.Buttons[:0]
+		for _, b := range p.Buttons {
+			// Dropa órfãos (botões fora do grid após encolher).
+			if b.Position.Row < 0 || b.Position.Row >= p.Grid.Rows ||
+				b.Position.Col < 0 || b.Position.Col >= p.Grid.Cols {
+				continue
+			}
+			if b.ID == "" || btnIDs[b.ID] {
+				b.ID = newID("btn_", btnIDs)
+			}
+			btnIDs[b.ID] = true
+			kept = append(kept, b)
+		}
+		p.Buttons = kept
 	}
-	s.cfg.Buttons = kept
 }
 
-// newButtonID gera um id curto e único ("btn_" + 6 hex).
-func newButtonID(used map[string]bool) string {
+// migrateLegacy converte o formato antigo (grid único + buttons no topo) em
+// uma única página, e limpa os campos legados para não reaparecerem no JSON.
+func (s *Store) migrateLegacy() {
+	if len(s.cfg.Pages) > 0 {
+		s.cfg.LegacyGrid, s.cfg.LegacyButtons = nil, nil
+		return
+	}
+	if s.cfg.LegacyGrid == nil && len(s.cfg.LegacyButtons) == 0 {
+		return // nada para migrar
+	}
+	grid := Grid{Rows: Default().Pages[0].Grid.Rows, Cols: Default().Pages[0].Grid.Cols}
+	if s.cfg.LegacyGrid != nil {
+		grid = *s.cfg.LegacyGrid
+	}
+	s.cfg.Pages = []Page{{
+		Name:    "Principal",
+		Grid:    grid,
+		Buttons: s.cfg.LegacyButtons,
+	}}
+	s.cfg.LegacyGrid, s.cfg.LegacyButtons = nil, nil
+}
+
+// newID gera um id curto e único (prefixo + 6 hex) dentro do conjunto dado.
+func newID(prefix string, used map[string]bool) string {
 	for {
 		var raw [3]byte
 		_, _ = rand.Read(raw[:])
-		id := "btn_" + hex.EncodeToString(raw[:])
+		id := prefix + hex.EncodeToString(raw[:])
 		if !used[id] {
 			return id
 		}
@@ -226,8 +292,12 @@ func (s *Store) save() error {
 
 func (s *Store) clone() DeckConfig {
 	c := s.cfg
-	// Importante: usar []Button{} (não nil) para que um deck sem botões
-	// serialize como [] e não como null no JSON enviado ao frontend.
-	c.Buttons = append([]Button{}, s.cfg.Buttons...)
+	// Deep-copy das páginas e seus botões. Importante: usar slices não-nil
+	// para que serializem como [] (não null) no JSON enviado ao frontend.
+	c.Pages = make([]Page, len(s.cfg.Pages))
+	for i, p := range s.cfg.Pages {
+		p.Buttons = append([]Button{}, s.cfg.Pages[i].Buttons...)
+		c.Pages[i] = p
+	}
 	return c
 }

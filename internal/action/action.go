@@ -66,6 +66,8 @@ type Spec struct {
 	Target string `json:"target,omitempty"`
 	// Discord (executado como keypress; o op é só rótulo/UI)
 	DiscordOp string `json:"discordOp,omitempty"`
+	// navigate (tratado no cliente: troca a página exibida no celular)
+	TargetPage string `json:"targetPage,omitempty"`
 }
 
 // Build converte a Spec na Action concreta correspondente, validando os
@@ -134,6 +136,15 @@ func (s Spec) build(depth int) (Action, error) {
 		}
 		return KeypressAction{Keys: s.Keys}, nil
 
+	case "navigate":
+		// Navegação é tratada no cliente (o celular troca a página exibida e
+		// não envia press). Esta Action existe só para o config round-tripar
+		// e para reportar erro caso seja acionada via WS por engano.
+		if s.TargetPage == "" {
+			return nil, fmt.Errorf("navigate sem página de destino")
+		}
+		return NavigateAction{TargetPage: s.TargetPage}, nil
+
 	default:
 		return nil, fmt.Errorf("tipo de ação desconhecido: %q", s.Type)
 	}
@@ -187,6 +198,16 @@ func (seq SequenceAction) Execute(ctx ExecContext) error {
 type OBSAction struct {
 	Op     string
 	Target string
+}
+
+// NavigateAction troca a página exibida no celular. É resolvida no cliente;
+// se chegar ao servidor (acionada via WS), Execute reporta erro.
+type NavigateAction struct {
+	TargetPage string
+}
+
+func (n NavigateAction) Execute(ExecContext) error {
+	return fmt.Errorf("navegação é tratada no cliente, não via WS")
 }
 
 func (o OBSAction) Execute(ctx ExecContext) error {

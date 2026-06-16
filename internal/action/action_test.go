@@ -29,6 +29,7 @@ func TestBuildValidTypes(t *testing.T) {
 		{"obs scene", Spec{Type: "obs", ObsOp: ObsOpScene, Target: "Cena 1"}, OBSAction{}},
 		{"obs toggle_record", Spec{Type: "obs", ObsOp: ObsOpToggleRecord}, OBSAction{}},
 		{"discord", Spec{Type: "discord", DiscordOp: "mute", Keys: []string{"ctrl", "shift", "m"}}, KeypressAction{}},
+		{"navigate", Spec{Type: "navigate", TargetPage: "page_abc123"}, NavigateAction{}},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -58,6 +59,7 @@ func TestBuildValidationErrors(t *testing.T) {
 		{"obs scene sem alvo", Spec{Type: "obs", ObsOp: ObsOpScene}, "sem alvo"},
 		{"obs mute sem alvo", Spec{Type: "obs", ObsOp: ObsOpToggleMute}, "sem alvo"},
 		{"discord sem teclas", Spec{Type: "discord", DiscordOp: "mute"}, "sem teclas"},
+		{"navigate sem destino", Spec{Type: "navigate"}, "sem página de destino"},
 		{"tipo desconhecido", Spec{Type: "frobnicate"}, "desconhecido"},
 	}
 	for _, tc := range cases {

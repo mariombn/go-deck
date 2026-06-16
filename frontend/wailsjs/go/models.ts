@@ -10,6 +10,7 @@ export namespace action {
 	    obsOp?: string;
 	    target?: string;
 	    discordOp?: string;
+	    targetPage?: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new Spec(source);
@@ -26,6 +27,7 @@ export namespace action {
 	        this.obsOp = source["obsOp"];
 	        this.target = source["target"];
 	        this.discordOp = source["discordOp"];
+	        this.targetPage = source["targetPage"];
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
@@ -175,21 +177,21 @@ export namespace config {
 	        this.cols = source["cols"];
 	    }
 	}
-	export class DeckConfig {
+	export class Page {
+	    id: string;
+	    name: string;
 	    grid: Grid;
-	    server: Server;
-	    integrations: Integrations;
 	    buttons: Button[];
 	
 	    static createFrom(source: any = {}) {
-	        return new DeckConfig(source);
+	        return new Page(source);
 	    }
 	
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.name = source["name"];
 	        this.grid = this.convertValues(source["grid"], Grid);
-	        this.server = this.convertValues(source["server"], Server);
-	        this.integrations = this.convertValues(source["integrations"], Integrations);
 	        this.buttons = this.convertValues(source["buttons"], Button);
 	    }
 	
@@ -211,6 +213,45 @@ export namespace config {
 		    return a;
 		}
 	}
+	export class DeckConfig {
+	    pages: Page[];
+	    server: Server;
+	    integrations: Integrations;
+	    grid?: Grid;
+	    buttons?: Button[];
+	
+	    static createFrom(source: any = {}) {
+	        return new DeckConfig(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.pages = this.convertValues(source["pages"], Page);
+	        this.server = this.convertValues(source["server"], Server);
+	        this.integrations = this.convertValues(source["integrations"], Integrations);
+	        this.grid = this.convertValues(source["grid"], Grid);
+	        this.buttons = this.convertValues(source["buttons"], Button);
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	
 	
 	
 	

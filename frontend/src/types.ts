@@ -20,7 +20,11 @@ export type DiscordAction = { type: 'discord'; discordOp: DiscordOp; keys: strin
 export type StepAction = KeypressAction | LaunchAction | UrlAction | ObsAction | DiscordAction;
 export type SequenceAction = { type: 'sequence'; steps: StepAction[] };
 
-export type Action = StepAction | SequenceAction;
+// Navegação entre grids (páginas). É resolvida no cliente: o celular troca a
+// página exibida e NÃO envia press ao PC. targetPage é o id da página alvo.
+export type NavigateAction = { type: 'navigate'; targetPage: string };
+
+export type Action = StepAction | SequenceAction | NavigateAction;
 export type ActionType = Action['type'];
 
 export interface Position {
@@ -40,6 +44,14 @@ export interface Grid {
   cols: number;
 }
 
+// Page é um grid independente ("área"), com tamanho e botões próprios.
+export interface Page {
+  id: string;
+  name: string;
+  grid: Grid;
+  buttons: ButtonConfig[];
+}
+
 export interface ServerConfig {
   port: number;
 }
@@ -56,10 +68,9 @@ export interface Integrations {
 }
 
 export interface DeckConfig {
-  grid: Grid;
+  pages: Page[];
   server: ServerConfig;
   integrations: Integrations;
-  buttons: ButtonConfig[];
 }
 
 // --- Mensagens WebSocket ---
