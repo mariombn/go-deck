@@ -6,10 +6,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Comandos
 
-A CLI do Wails é instalada via `go install` e fica em `$GOPATH/bin` (ex.: `C:\Users\<user>\go\bin`), que **não está no PATH por padrão** — adicione antes de usar (`$env:Path += ";$env:USERPROFILE\go\bin"`).
+A CLI do Wails é instalada via `go install` e fica em `$(go env GOPATH)/bin`, que **não está no PATH por padrão**:
+- Windows: `$env:Path += ";$env:USERPROFILE\go\bin"`
+- macOS: `export PATH="$PATH:$(go env GOPATH)/bin"` (ou adicione ao `.zshrc`)
 
 - **Dev (hot-reload):** `wails dev` — abre o webview e roda o Vite em `127.0.0.1:5173`. Compila com a tag `dev` automaticamente.
-- **Build de produção:** `wails build` — regenera os bindings, builda o frontend e gera `build/bin/go-deck.exe` (app React embutido). Use isto para validar o build completo.
+- **Build de produção:** `wails build` — regenera os bindings, builda o frontend e gera `build/bin/go-deck.exe` (Windows) ou `build/bin/go-deck.app` (macOS). Use isto para validar o build completo.
 - **Frontend isolado:** dentro de `frontend/` → `npm run dev` | `npm run build` (`tsc && vite build`).
 - **Go:** `go vet ./...`. `go build -tags dev ./...` valida a variante dev (reverse-proxy). `go build ./...` puro **falha** se `frontend/dist` não existir (por causa do `//go:embed`) — rode `wails build` ou builde o frontend antes.
 - **Testes:** ainda não há testes. `go test ./...`; um único: `go test ./internal/input -run TestNome`.
@@ -27,9 +29,9 @@ A CLI do Wails é instalada via `go install` e fica em `$GOPATH/bin` (ex.: `C:\U
 **Caminho crítico de um toque:**
 `celular → WS {type:"press",buttonId} → server.press → Store.FindButton → action.Spec.Build() → Action.Execute(ExecContext{Input, Launcher, OBS}) → SendKeys / Launch / OpenURL / OBS.*`.
 
-**Camadas isoladas por interface (para SO futuro):**
-- `InputController` (`internal/input`) — implementação Windows é **`SendInput` em Go puro, sem CGO** (`sendinput_windows.go`); outros SOs são stub (`sendinput_other.go`). O vocabulário de teclas vive em `keymap.go`.
-- `Launcher` (`internal/launch`) — abre programas/URLs (`os/exec`, **sem shell**); Windows (`launcher_windows.go`) usa `exec.Command` para `launch` e `rundll32 url.dll` para `url`; outros SOs são stub. Mesmo padrão do `InputController`.
+**Camadas isoladas por interface:**
+- `InputController` (`internal/input`) — Windows: **`SendInput` em Go puro, sem CGO** (`sendinput_windows.go`); macOS: **`CGEvent` via CGO** (`sendinput_darwin.go`, requer permissão de Acessibilidade — `AXIsProcessTrustedWithOptions` abre o prompt automático na 1ª chamada sem permissão); Linux e outros: stub (`sendinput_other.go`). Vocabulário de teclas em `keymap.go` (`cmd`/`opt` são macOS-only; `playpause`/`nexttrack`/`prevtrack` são Windows-only).
+- `Launcher` (`internal/launch`) — Windows (`launcher_windows.go`): `exec.Command` para `launch` e `rundll32 url.dll` para `url`; macOS (`launcher_darwin.go`): `open path` para bundles `.app`, `exec.Command` para binários, `open url` para URLs; Linux e outros: stub. Mesmo padrão do `InputController`.
 - `obs.Controller` (`internal/obs`) — controla o OBS Studio via **obs-websocket v5** (lib `goobs`, Go puro). É **rede pura** (não depende do SO), então tem **uma implementação só** (sem arquivos por SO). **Conecta por toque** (dial→request→fecha), com timeouts; não importa `config` (evita ciclo — o mapeamento `config.OBSConfig → obs.Settings` vive em `server.obsSettings`).
 - `Action` (`internal/action`) — polimórfico via `Spec.Build()`. Tipos: `keypress`, `launch`, `url`, `sequence` (lista de ações em ordem, aninhável até `maxSequenceDepth`=10, **aborta no 1º erro**), `obs` (`obsOp` + `target`), `discord` (mute/deafen — **é keypress por baixo**, dispara o keybind global do Discord; o `discordOp` é só rótulo/UI) e `navigate` (`targetPage` — **resolvido no cliente**, troca a página exibida no celular; não executa no servidor). `Spec` é um struct **chato** (todos os campos `omitempty`); cada tipo usa só os seus. As ações recebem um `ExecContext{Input, Launcher, OBS}` em `Execute` — adicionar uma capacidade nova = novo campo no `ExecContext`, sem mudar a assinatura. Adicionar tipos = nova implementação, sem refatorar o resto.
 
@@ -41,6 +43,7 @@ A CLI do Wails é instalada via `go install` e fica em `$GOPATH/bin` (ex.: `C:\U
 
 - **`crossorigin` em `<script type="module">`** deixa o WebView2 **em branco** sob o esquema `wails.localhost`. O `frontend/vite.config.ts` tem um plugin que remove esse atributo no build — não tire.
 - **Slice Go `nil` vira `null` no JSON** (não `[]`), quebrando `.find()`/`.length` no frontend. Sempre devolva slices não-nulos ao frontend: `config.Store.clone()` força `[]T{}`, e o frontend tem guardas defensivas (`?? []`).
+- **macOS + `sendinput_other.go`:** a build tag é `!windows && !darwin`. Se adicionar suporte a outro SO (ex.: Linux), crie `sendinput_linux.go` e atualize a tag do `_other.go` de novo — senão haverá dois `newController()` no mesmo pacote e o build quebra.
 
 ## Convenções e estado atual
 

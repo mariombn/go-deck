@@ -1,10 +1,10 @@
 # go-deck
 
-Um *Stream Deck* open-source: um app desktop (Windows) que expõe **vários
-grids** de botões na rede local. Pelo celular, via QR Code, você abre os grids
-no navegador e, ao tocar num botão, o PC executa a ação configurada — desde
-uma **macro de teclado** até abrir um programa, uma URL, controlar o **OBS
-Studio** ou mutar o **Discord**.
+Um *Stream Deck* open-source: um app desktop (**Windows e macOS**) que expõe
+**vários grids** de botões na rede local. Pelo celular, via QR Code, você abre
+os grids no navegador e, ao tocar num botão, o computador executa a ação
+configurada — desde uma **macro de teclado** até abrir um programa, uma URL,
+controlar o **OBS Studio** ou mutar o **Discord**.
 
 Inspirado no [OpenDeck](https://github.com/nekename/OpenDeck). Construído com
 **Go + Wails v2 + React/TypeScript + Tailwind**.
@@ -13,7 +13,7 @@ Inspirado no [OpenDeck](https://github.com/nekename/OpenDeck). Construído com
 
 ```
 Toque no celular ──ws──► servidor Go ──► executa a Action:
-                                          • keypress  (SendInput, Win32, Go puro)
+                                          • keypress  (SendInput/Win32 ou CGEvent/macOS)
                                           • launch / url (os/exec, sem shell)
                                           • obs       (obs-websocket v5)
                                           • discord   (keybind global)
@@ -24,11 +24,12 @@ Toque no celular ──ws──► servidor Go ──► executa a Action:
 - **Desktop (Wails):** editor de configuração + QR Code. Webview NÃO exposto na rede.
 - **Servidor de rede (net/http + gorilla/websocket):** processo separado, no mesmo
   binário, serve o app React ao celular e recebe os toques via WebSocket.
-- **Camadas isoladas por interface:** `InputController` (teclado via `SendInput`
-  nativo — **Go puro, sem CGO**), `Launcher` (abre programas/URLs via `os/exec`,
-  sem shell) e `obs.Controller` (OBS via obs-websocket). As ações recebem um
-  `ExecContext` com essas capacidades, então adicionar uma nova = um campo a mais,
-  sem refatorar o resto. Permite macOS/Linux no futuro.
+- **Camadas isoladas por interface:** `InputController` (teclado — Windows via
+  `SendInput` em Go puro, macOS via `CGEvent` com CGO), `Launcher` (abre
+  programas/URLs — Windows usa `rundll32`, macOS usa `open`) e `obs.Controller`
+  (OBS via obs-websocket, plataforma-agnóstico). As ações recebem um `ExecContext`
+  com essas capacidades, então adicionar uma nova = um campo a mais, sem refatorar
+  o resto.
 - **Um único bundle React:** detecta em runtime se está no Wails (mostra o editor) ou
   no navegador do celular (mostra só os grids).
 
@@ -36,10 +37,9 @@ Toque no celular ──ws──► servidor Go ──► executa a Action:
 
 - **Go 1.21+**
 - **Node.js LTS**
-- **WebView2 runtime** (já vem no Windows 11)
 - **Wails CLI v2:** `go install github.com/wailsapp/wails/v2/cmd/wails@latest`
-
-> Não é necessário compilador C / MinGW: a POC não usa CGO.
+- **Windows:** WebView2 runtime (já vem no Windows 11); sem CGO (teclado via `SendInput` em Go puro)
+- **macOS:** Xcode Command Line Tools (`xcode-select --install`); CGO é necessário para a simulação de teclado via `CGEvent`
 
 ## Rodar em desenvolvimento
 
@@ -57,7 +57,9 @@ do celular aparece no QR Code da própria UI.
 wails build
 ```
 
-Gera um binário único em `build/bin/go-deck.exe` (com o app React embutido).
+Gera o app com o React embutido:
+- **Windows:** `build/bin/go-deck.exe`
+- **macOS:** `build/bin/go-deck.app`
 
 ## Uso
 
@@ -69,7 +71,9 @@ Gera um binário único em `build/bin/go-deck.exe` (com o app React embutido).
 4. Toque num botão → a ação é executada no PC (ou, se for *navigate*, troca de grid
    no próprio celular). O botão **Home** volta ao primeiro grid.
 
-A configuração é salva em `%APPDATA%/DeckPilot/config.json`.
+A configuração é salva em:
+- **Windows:** `%APPDATA%/DeckPilot/config.json`
+- **macOS:** `~/Library/Application Support/DeckPilot/config.json`
 
 ## Ações disponíveis
 
@@ -106,12 +110,12 @@ redimensionada para 128 px, embutida na config como data URL).
 
 ## Modelo de teclas
 
-- Modificadores: `ctrl`, `shift`, `alt`, `win`
+- Modificadores: `ctrl`, `shift`, `alt`, `win` — mais `cmd`, `opt` (exclusivos macOS)
 - Letras `a`–`z`, dígitos `0`–`9`, `f1`–`f12`
 - Especiais: `enter`, `esc`, `tab`, `space`, `backspace`, `delete`, `insert`,
   `home`, `end`, `pageup`, `pagedown`, setas (`up`/`down`/`left`/`right`)
-- Mídia: `mute`, `volup`, `voldown`, `playpause`, `nexttrack`, `prevtrack`
-- Um botão = **um combo simultâneo** (ex.: `["ctrl","shift","m"]`).
+- Mídia: `mute`, `volup`, `voldown` — mais `playpause`, `nexttrack`, `prevtrack` (só Windows)
+- Um botão = **um combo simultâneo** (ex.: `["ctrl","shift","m"]` ou `["cmd","c"]` no Mac).
 
 ## Limitações conhecidas (POC)
 
@@ -125,7 +129,9 @@ redimensionada para 128 px, embutida na config como data URL).
   (porta ocupada gera erro explícito, sem fallback automático).
 - `Ctrl+Alt+Del` e a tecla Win em combo não são capturáveis pelo navegador (o
   SO os intercepta); use os botões de teclas especiais para Win/mídia.
-- Alvo único: **Windows**. macOS/Linux ficam para depois (input já isolado por interface).
+- **Linux** ainda não suportado (stubs retornam erro; input já isolado por interface).
+- **macOS:** ações `keypress` exigem permissão de **Acessibilidade** (Configurações do Sistema → Privacidade e Segurança → Acessibilidade). Na primeira execução o app abre o painel automaticamente. Teclas de mídia `playpause`/`nexttrack`/`prevtrack` não são suportadas no macOS.
+- O app macOS não é assinado/notarizado — para abrir pela primeira vez: clique direito → Abrir.
 
 ## Pegadinhas de implementação (Windows + Wails v2)
 
@@ -141,8 +147,8 @@ Duas armadilhas que custam horas de debug e já estão tratadas no código:
    botões enviava `"buttons": null`, e o frontend quebrava em `.find()`. O
    `clone()` do config força `[]T{}`; o frontend ainda tem guardas defensivas.
 
-> Bônus: a POC **não usa CGO** (input via `SendInput` em Go puro), então a
-> "pegadinha #1" do brief original (compilador C para o robotgo) não se aplica.
+> No **Windows** não há CGO (input via `SendInput` em Go puro). No **macOS** o
+> CGO é necessário para o `CGEvent` — exige Xcode Command Line Tools instalados.
 
 ## Estrutura
 
@@ -152,7 +158,7 @@ go-deck/
 ├── app.go                  # bindings expostos ao desktop (config, rede, QR, TestOBS)
 ├── internal/
 │   ├── config/             # modelo de dados (Pages/Button/Integrations) + load/save
-│   ├── input/              # InputController + SendInput (Windows, Go puro)
+│   ├── input/              # InputController — SendInput (Windows) / CGEvent (macOS)
 │   ├── launch/             # Launcher (abre programas/URLs, sem shell) — por SO
 │   ├── obs/                # obs.Controller via obs-websocket v5 (lib goobs)
 │   ├── action/             # interface Action + tipos (keypress/launch/url/obs/…)

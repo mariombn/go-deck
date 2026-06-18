@@ -16,6 +16,8 @@ var modifiers = map[string]bool{
 	"shift": true,
 	"alt":   true,
 	"win":   true,
+	"cmd":   true, // macOS Command (⌘)
+	"opt":   true, // macOS Option (⌥), alias de alt
 }
 
 // keymap mapeia os nomes usados no config.json para virtual-key codes do
