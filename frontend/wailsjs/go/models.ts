@@ -72,6 +72,8 @@ export namespace config {
 	    label: string;
 	    position: Position;
 	    action: action.Spec;
+	    icon?: string;
+	    color?: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new Button(source);
@@ -83,6 +85,8 @@ export namespace config {
 	        this.label = source["label"];
 	        this.position = this.convertValues(source["position"], Position);
 	        this.action = this.convertValues(source["action"], action.Spec);
+	        this.icon = source["icon"];
+	        this.color = source["color"];
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {

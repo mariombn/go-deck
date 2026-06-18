@@ -1,5 +1,6 @@
 import {ButtonConfig} from '../types';
 import {actionSummary} from '../lib/actions';
+import {isImageIcon, textColorFor} from '../lib/appearance';
 
 interface Props {
   button: ButtonConfig | null;
@@ -10,10 +11,11 @@ interface Props {
 
 // DeckButton renderiza uma célula do grid (tanto no editor desktop quanto no
 // celular). Célula vazia: no desktop vira um alvo "+" para criar botão; no
-// celular fica inerte.
+// celular fica inerte. Aparência: cor de fundo (com contraste automático do
+// texto) e um ícone que é emoji ou imagem (data URL).
 export default function DeckButton({button, mode, flash, onClick}: Props) {
   const base =
-    'aspect-square rounded-2xl flex flex-col items-center justify-center p-2 text-center select-none transition';
+    'aspect-square rounded-2xl flex flex-col items-center justify-center p-2 text-center select-none transition overflow-hidden';
 
   if (!button) {
     if (mode === 'desktop') {
@@ -29,24 +31,42 @@ export default function DeckButton({button, mode, flash, onClick}: Props) {
     return <div className={`${base} border border-slate-800/60`} />;
   }
 
+  // Flash (ack ok/erro) tem prioridade visual sobre a cor custom.
   const flashClass =
     flash === 'ok'
       ? 'ring-4 ring-green-400 bg-green-600'
       : flash === 'err'
       ? 'ring-4 ring-red-400 bg-red-600'
+      : button.color
+      ? 'active:scale-95'
       : 'bg-slate-700 hover:bg-slate-600 active:scale-95';
 
+  // Cor custom só quando não está em flash (para o feedback verde/vermelho
+  // aparecer por cima). Texto com contraste automático.
+  const useColor = !flash && !!button.color;
+  const style = useColor ? {backgroundColor: button.color, color: textColorFor(button.color)} : undefined;
+
+  const hasImage = isImageIcon(button.icon);
+
   return (
-    <button
-      onClick={onClick}
-      className={`${base} ${flashClass} shadow-md`}
-    >
-      <span className="text-base font-semibold leading-tight text-white line-clamp-2">
-        {button.label || '(sem nome)'}
+    <button onClick={onClick} className={`${base} ${flashClass} shadow-md`} style={style}>
+      {button.icon &&
+        (hasImage ? (
+          <img src={button.icon} alt="" className="mb-1 h-8 w-8 object-contain" />
+        ) : (
+          <span className="mb-0.5 text-2xl leading-none">{button.icon}</span>
+        ))}
+      <span className="text-base font-semibold leading-tight line-clamp-2" style={useColor ? undefined : {color: '#fff'}}>
+        {button.label || (button.icon ? '' : '(sem nome)')}
       </span>
-      <span className="mt-1 text-[10px] font-mono text-slate-300/80 line-clamp-1">
-        {actionSummary(button.action)}
-      </span>
+      {mode === 'desktop' && (
+        <span
+          className={`mt-1 text-[10px] font-mono line-clamp-1 ${useColor ? 'opacity-70' : 'text-slate-300/80'}`}
+          style={useColor ? {color: textColorFor(button.color)} : undefined}
+        >
+          {actionSummary(button.action)}
+        </span>
+      )}
     </button>
   );
 }

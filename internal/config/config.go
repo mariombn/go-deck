@@ -56,6 +56,11 @@ type Button struct {
 	Label    string      `json:"label"`
 	Position Position    `json:"position"`
 	Action   action.Spec `json:"action"`
+	// Aparência (opcional). Icon é OU um emoji (unicode) OU uma data URL de
+	// imagem (base64) — o cliente distingue por "data:" no início. Color é a
+	// cor de fundo (hex); vazio = padrão.
+	Icon  string `json:"icon,omitempty"`
+	Color string `json:"color,omitempty"`
 }
 
 // Page é um grid independente ("área"), com tamanho e botões próprios. O

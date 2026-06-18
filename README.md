@@ -1,8 +1,10 @@
 # go-deck
 
-POC de um *Stream Deck* open-source: um app desktop (Windows) que expõe um
-grid de botões na rede local. Pelo celular, via QR Code, você abre o grid no
-navegador e, ao tocar num botão, o PC executa uma **macro de teclado**.
+Um *Stream Deck* open-source: um app desktop (Windows) que expõe **vários
+grids** de botões na rede local. Pelo celular, via QR Code, você abre os grids
+no navegador e, ao tocar num botão, o PC executa a ação configurada — desde
+uma **macro de teclado** até abrir um programa, uma URL, controlar o **OBS
+Studio** ou mutar o **Discord**.
 
 Inspirado no [OpenDeck](https://github.com/nekename/OpenDeck). Construído com
 **Go + Wails v2 + React/TypeScript + Tailwind**.
@@ -10,18 +12,25 @@ Inspirado no [OpenDeck](https://github.com/nekename/OpenDeck). Construído com
 ## Como funciona
 
 ```
-Toque no celular ──ws──► servidor Go ──► executa a Action (combo de teclas)
-                                          via SendInput (Win32, Go puro)
+Toque no celular ──ws──► servidor Go ──► executa a Action:
+                                          • keypress  (SendInput, Win32, Go puro)
+                                          • launch / url (os/exec, sem shell)
+                                          • obs       (obs-websocket v5)
+                                          • discord   (keybind global)
+                                          • sequence  (várias em ordem)
+                            └─ navigate é resolvido no próprio celular (troca de grid)
 ```
 
 - **Desktop (Wails):** editor de configuração + QR Code. Webview NÃO exposto na rede.
 - **Servidor de rede (net/http + gorilla/websocket):** processo separado, no mesmo
   binário, serve o app React ao celular e recebe os toques via WebSocket.
-- **Input:** `SendInput` nativo do Windows via `golang.org/x/sys/windows` — **Go puro,
-  sem CGO** (não precisa de robotgo nem de compilador C). Isolado atrás da interface
-  `InputController` para permitir macOS/Linux no futuro.
+- **Camadas isoladas por interface:** `InputController` (teclado via `SendInput`
+  nativo — **Go puro, sem CGO**), `Launcher` (abre programas/URLs via `os/exec`,
+  sem shell) e `obs.Controller` (OBS via obs-websocket). As ações recebem um
+  `ExecContext` com essas capacidades, então adicionar uma nova = um campo a mais,
+  sem refatorar o resto. Permite macOS/Linux no futuro.
 - **Um único bundle React:** detecta em runtime se está no Wails (mostra o editor) ou
-  no navegador do celular (mostra só o grid).
+  no navegador do celular (mostra só os grids).
 
 ## Pré-requisitos
 
@@ -53,13 +62,47 @@ Gera um binário único em `build/bin/go-deck.exe` (com o app React embutido).
 ## Uso
 
 1. Abra o `go-deck.exe` (ou `wails dev`).
-2. Defina o grid (linhas × colunas) e clique numa célula para criar um botão
-   (rótulo + combinação de teclas — capture ao vivo ou use os botões de teclas
-   especiais para Win/mídia). Clique em **Salvar configuração**.
+2. Crie/renomeie **grids** nas abas laterais e defina o tamanho (linhas × colunas)
+   de cada um. Clique numa célula para criar um botão: rótulo, **tipo de ação** e
+   **aparência** (emoji/imagem/cor). Clique em **Salvar configuração**.
 3. No celular (mesma rede Wi-Fi), escaneie o QR Code.
-4. Toque num botão → a combinação de teclas é executada no PC, no app em foco.
+4. Toque num botão → a ação é executada no PC (ou, se for *navigate*, troca de grid
+   no próprio celular). O botão **Home** volta ao primeiro grid.
 
 A configuração é salva em `%APPDATA%/DeckPilot/config.json`.
+
+## Ações disponíveis
+
+| Tipo | O que faz |
+|------|-----------|
+| **keypress** | Dispara um combo simultâneo de teclas (ver modelo abaixo). |
+| **launch** | Abre um programa (`path` + `args`), via `os/exec` sem shell. |
+| **url** | Abre uma URL no aplicativo padrão do SO. |
+| **obs** | Controla o OBS: trocar cena, gravar/transmitir, mutar fonte, disparar hotkey. |
+| **discord** | Mute/Deafen — na prática um *keypress* do keybind global do Discord. |
+| **sequence** | Executa uma lista de ações em ordem (aborta no 1º erro). |
+| **navigate** | Vai para outro grid — resolvido **no celular**, não toca o PC. |
+
+### Integrações
+
+- **OBS Studio:** habilite *Ferramentas → Configurações do Servidor WebSocket* no
+  OBS, e preencha host/porta/senha no painel lateral do editor (com **Testar
+  conexão**). A conexão é feita por toque (sem estado), via obs-websocket v5.
+- **Discord:** não há API local para controlar o próprio cliente. Configure o
+  atalho desejado como **keybind global** no Discord e capture a mesma tecla no
+  go-deck. Por isso só *mute/deafen* (push-to-talk é "segurar", não casa com toque).
+
+### Vários grids e navegação
+
+Cada grid é uma página com tamanho e botões próprios. Um botão *navigate* leva a
+outro grid (troca client-side, sem enviar nada ao PC); o celular tem um botão
+**Home** fixo para voltar ao primeiro.
+
+### Aparência dos botões
+
+Cada botão pode ter cor de fundo (paleta ou cor livre; o texto ganha contraste
+automático) e um ícone — **emoji** (seletor com busca) **ou imagem** (enviada e
+redimensionada para 128 px, embutida na config como data URL).
 
 ## Modelo de teclas
 
@@ -73,8 +116,11 @@ A configuração é salva em `%APPDATA%/DeckPilot/config.json`.
 ## Limitações conhecidas (POC)
 
 - **Sem autenticação/HTTPS:** qualquer dispositivo na LAN que abrir a URL pode
-  acionar os botões. Há validação de `Origin` no WebSocket (higiene mínima) e um
-  aviso na UI, mas não é seguro para redes não confiáveis.
+  acionar os botões **já configurados**. Há validação de `Origin` no WebSocket
+  (higiene mínima) e um aviso na UI, mas não é seguro para redes não confiáveis.
+  Com a ação **launch**, isso significa que a LAN pode disparar a abertura dos
+  programas/URLs definidos no PC (o celular só envia o *id* do botão, nunca um
+  `path`). A **senha do OBS** fica no `config.json` em **texto puro**.
 - A **porta** é lida na inicialização. Mudá-la no editor exige reiniciar o app
   (porta ocupada gera erro explícito, sem fallback automático).
 - `Ctrl+Alt+Del` e a tecla Win em combo não são capturáveis pelo navegador (o
@@ -103,16 +149,19 @@ Duas armadilhas que custam horas de debug e já estão tratadas no código:
 ```
 go-deck/
 ├── main.go                 # bootstrap Wails + embed do frontend
-├── app.go                  # bindings expostos ao desktop (config, rede, QR)
+├── app.go                  # bindings expostos ao desktop (config, rede, QR, TestOBS)
 ├── internal/
-│   ├── config/             # modelo de dados + load/save do config.json (thread-safe)
+│   ├── config/             # modelo de dados (Pages/Button/Integrations) + load/save
 │   ├── input/              # InputController + SendInput (Windows, Go puro)
-│   ├── action/             # interface Action + KeypressAction
+│   ├── launch/             # Launcher (abre programas/URLs, sem shell) — por SO
+│   ├── obs/                # obs.Controller via obs-websocket v5 (lib goobs)
+│   ├── action/             # interface Action + tipos (keypress/launch/url/obs/…)
 │   └── server/             # http + websocket + QR + detecção de IP da LAN
 └── frontend/src/
     ├── components/         # DeckGrid, DeckButton (compartilhados)
-    ├── desktop/            # editor de config + QR (modo Wails)
-    ├── mobile/             # grid + WebSocket (modo celular)
-    ├── lib/                # detecção de runtime + vocabulário/captura de teclas
-    └── types.ts            # tipos compartilhados (DeckConfig etc.)
+    ├── desktop/            # editor: abas de grids, ButtonEditor, ActionFields,
+    │                       #   AppearanceFields (emoji/imagem/cor), OBSPanel
+    ├── mobile/             # grids + WebSocket + navegação/Home (modo celular)
+    ├── lib/                # runtime, teclas, resumo de ação, aparência/contraste
+    └── types.ts            # tipos compartilhados (DeckConfig, Page, Action…)
 ```

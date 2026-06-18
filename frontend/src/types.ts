@@ -37,6 +37,10 @@ export interface ButtonConfig {
   label: string;
   position: Position;
   action: Action;
+  // Aparência (opcional). icon é OU um emoji OU uma data URL de imagem
+  // (distinguidos por "data:" no início). color é a cor de fundo (hex).
+  icon?: string;
+  color?: string;
 }
 
 export interface Grid {

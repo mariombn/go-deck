@@ -10,12 +10,10 @@ kanban-plugin: board
 - [ ] Descoberta automática via mDNS
 	  Dispensa digitar/escolher o IP manualmente.
 - [ ] HTTPS
-- [ ] Cores e estados customizados de botão
 
 
 ## 📋 Backlog
 
-- [ ] Ícones/imagens nos botões
 - [ ] Reordenação drag-and-drop dos botões
 - [ ] Suporte a macOS
 	  `CGEvent` + permissão de Acessibilidade, atrás do mesmo `InputController`.
@@ -73,6 +71,11 @@ kanban-plugin: board
 	  antigo; ids de botão únicos no deck inteiro. Action `navigate`
 	  (client-side) + botão Home no celular; abas laterais nomeáveis no
 	  editor. Cobre o antigo item "Perfis múltiplos" numa forma mais leve.
+- [x] Aparência dos botões: emoji, imagem e cor
+	  `Button.icon` (emoji OU imagem base64 inline) + `Button.color` (fundo,
+	  texto com contraste automático). Editor com paleta+cor custom, seletor
+	  de emoji (emoji-picker-react, nativo) e upload de imagem redimensionada.
+	  Cobre os itens "Ícones/imagens" e "Cores customizadas".
 
 
 
