@@ -19,8 +19,11 @@ kanban-plugin: board
 	  `CGEvent` + permissão de Acessibilidade, atrás do mesmo `InputController`.
 - [ ] Suporte a Linux
 	  X11 via XTEST; Wayland é o ponto fraco do input.
-- [ ] Empacotamento e instaladores cross-platform
-	  CGO não é usado, mas o webview ainda exige runners por SO.
+- [ ] Assinatura e notarização (macOS) + code signing (Windows)
+	  Sem isso o Gatekeeper/SmartScreen bloqueiam. Notarização exige conta
+	  Apple Developer; pode ser adicionada ao workflow de release depois.
+- [ ] Instaladores (NSIS no Windows, DMG no macOS)
+	  Hoje o release publica binário/.app soltos via `wails build`.
 
 
 ## 🔜 Próximas
@@ -31,8 +34,9 @@ kanban-plugin: board
 	  Reiniciar o listener ao salvar a config com porta diferente.
 - [ ] Token de autenticação no QR
 	  Fechar o acesso aberto na LAN (decisão S2 adiada na POC).
-- [ ] GitHub Actions: build do `.exe` no Windows
-	  Runner windows; como não há CGO, o CI fica simples.
+- [x] GitHub Actions: build de release (Windows + macOS)
+	  `.github/workflows/release.yml` dispara ao publicar um release; matrix
+	  com runners nativos (mac precisa de CGO), anexa `.exe` e `.app` (zip).
 - [ ] Adicionar `LICENSE` ao repositório
 - [ ] Testes unitários
 	  Keymap, normalização da config e detecção de IP da LAN.
