@@ -28,16 +28,19 @@ kanban-plugin: board
 
 ## 🔜 Próximas
 
-- [ ] Remover/condicionar o overlay de diagnóstico
-	  Hoje qualquer erro vira caixa vermelha; tornar dev-only ou remover.
 - [ ] Troca de porta sem reiniciar
 	  Reiniciar o listener ao salvar a config com porta diferente.
-- [ ] Token de autenticação no QR
-	  Fechar o acesso aberto na LAN (decisão S2 adiada na POC).
+- [x] Remover/condicionar o overlay de diagnóstico
+	  Dev-only via `import.meta.env.DEV`; em produção só `console.error`.
+- [x] Token de autenticação no QR
+	  `Server.Token` (gerado/persistido em config, removido do clone enviado ao
+	  frontend) viaja no `?t=` do QR; WS valida em tempo constante. Fecha o
+	  acesso aberto na LAN (decisão S2). Falta HTTPS e rotação pela UI.
 - [x] GitHub Actions: build de release (Windows + macOS)
 	  `.github/workflows/release.yml` dispara ao publicar um release; matrix
 	  com runners nativos (mac precisa de CGO), anexa `.exe` e `.app` (zip).
-- [ ] Adicionar `LICENSE` ao repositório
+- [x] Adicionar `LICENSE` ao repositório
+	  MIT, referenciada também no README.
 - [ ] Testes unitários
 	  Keymap, normalização da config e detecção de IP da LAN.
 
@@ -75,6 +78,9 @@ kanban-plugin: board
 	  antigo; ids de botão únicos no deck inteiro. Action `navigate`
 	  (client-side) + botão Home no celular; abas laterais nomeáveis no
 	  editor. Cobre o antigo item "Perfis múltiplos" numa forma mais leve.
+- [x] Manter a tela do celular sempre ligada
+	  Botão no cabeçalho do `MobileApp` (`useKeepAwake` via NoSleep.js — a Wake
+	  Lock API nativa não vale em http/LAN por não ser contexto seguro).
 - [x] Aparência dos botões: emoji, imagem e cor
 	  `Button.icon` (emoji OU imagem base64 inline) + `Button.color` (fundo,
 	  texto com contraste automático). Editor com paleta+cor custom, seletor

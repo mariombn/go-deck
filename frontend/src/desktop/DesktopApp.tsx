@@ -289,8 +289,9 @@ export default function DesktopApp() {
           )}
 
           <div className="mt-4 rounded-lg bg-amber-500/10 p-3 text-xs text-amber-300">
-            ⚠️ Sem autenticação: qualquer dispositivo na sua rede local que abrir esta URL pode acionar os botões
-            existentes — incluindo abrir programas e URLs configurados — no seu PC.
+            🔒 Acesso protegido por token: só dispositivos que escanearem este QR conseguem acionar os botões. Não
+            compartilhe o QR/link. Sem HTTPS — o token trafega na LAN em texto puro, então use apenas em redes
+            confiáveis.
           </div>
 
           <OBSPanel

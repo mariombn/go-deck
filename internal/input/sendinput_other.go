@@ -13,6 +13,6 @@ type otherController struct{}
 
 func newController() InputController { return otherController{} }
 
-func (otherController) SendKeys(keys []string) error {
+func (otherController) SendKeys(keys []string, holdMs int) error {
 	return fmt.Errorf("simulação de teclado não implementada neste SO (POC só suporta Windows)")
 }

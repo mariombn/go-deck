@@ -18,6 +18,11 @@ import (
 // recursão patológica (ou ciclos montados à mão no arquivo).
 const maxSequenceDepth = 10
 
+// maxHoldMs é o teto da duração de um keypress "apertar e manter" (5s). Evita
+// que um config editado à mão deixe uma tecla pressionada por tempo absurdo,
+// travando o input do PC. 0 = toque rápido (comportamento padrão).
+const maxHoldMs = 5000
+
 // Operações do OBS (campo obsOp). scene/toggle_mute/hotkey exigem um target;
 // os toggles de gravação/transmissão não.
 const (
@@ -55,12 +60,15 @@ type Action interface {
 //	{ "type": "obs", "obsOp": "scene", "target": "Cena 1" }
 //	{ "type": "discord", "discordOp": "mute", "keys": ["ctrl","shift","m"] }
 type Spec struct {
-	Type  string   `json:"type"`
-	Keys  []string `json:"keys,omitempty"`
-	Path  string   `json:"path,omitempty"`
-	Args  []string `json:"args,omitempty"`
-	URL   string   `json:"url,omitempty"`
-	Steps []Spec   `json:"steps,omitempty"`
+	Type string   `json:"type"`
+	Keys []string `json:"keys,omitempty"`
+	// HoldMs (keypress): se > 0, "apertar e manter" o combo por esses
+	// milissegundos antes de soltar. 0/ausente = toque rápido.
+	HoldMs int      `json:"holdMs,omitempty"`
+	Path   string   `json:"path,omitempty"`
+	Args   []string `json:"args,omitempty"`
+	URL    string   `json:"url,omitempty"`
+	Steps  []Spec   `json:"steps,omitempty"`
 	// OBS
 	ObsOp  string `json:"obsOp,omitempty"`
 	Target string `json:"target,omitempty"`
@@ -82,7 +90,10 @@ func (s Spec) build(depth int) (Action, error) {
 		if len(s.Keys) == 0 {
 			return nil, fmt.Errorf("keypress sem teclas")
 		}
-		return KeypressAction{Keys: s.Keys}, nil
+		if s.HoldMs < 0 || s.HoldMs > maxHoldMs {
+			return nil, fmt.Errorf("duração de retenção inválida: %d ms (use de 0 a %d)", s.HoldMs, maxHoldMs)
+		}
+		return KeypressAction{Keys: s.Keys, HoldMs: s.HoldMs}, nil
 
 	case "launch":
 		if s.Path == "" {
@@ -150,13 +161,16 @@ func (s Spec) build(depth int) (Action, error) {
 	}
 }
 
-// KeypressAction dispara um combo simultâneo de teclas.
+// KeypressAction dispara um combo de teclas. HoldMs == 0 é um toque; > 0
+// mantém o combo pressionado por essa duração (em milissegundos) antes de
+// soltar.
 type KeypressAction struct {
-	Keys []string
+	Keys   []string
+	HoldMs int
 }
 
 func (k KeypressAction) Execute(ctx ExecContext) error {
-	return ctx.Input.SendKeys(k.Keys)
+	return ctx.Input.SendKeys(k.Keys, k.HoldMs)
 }
 
 // LaunchAction abre um programa (fire-and-forget), sem shell.

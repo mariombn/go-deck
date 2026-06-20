@@ -1,8 +1,48 @@
 import {useEffect, useRef, useState, useCallback} from 'react';
+import NoSleep from 'nosleep.js';
 import {ButtonConfig, DeckConfig, ServerMessage} from '../types';
 import DeckGrid from '../components/DeckGrid';
 
 type ConnStatus = 'connecting' | 'connected' | 'reconnecting';
+
+// useKeepAwake impede o bloqueio automático da tela do celular enquanto o deck
+// está aberto. A Screen Wake Lock API nativa só funciona em contexto seguro
+// (HTTPS/localhost) — e o celular acessa via http://IP da LAN, que NÃO é seguro.
+// Por isso usamos NoSleep.js, que recorre a um <video> invisível em loop (e à
+// Wake Lock API automaticamente quando houver HTTPS no futuro).
+//
+// enabled = intenção do usuário; enable() precisa rodar dentro de um gesto
+// (o clique no botão atende). Volta a ativar ao retornar para a aba.
+function useKeepAwake(): {enabled: boolean; toggle: () => void} {
+  const [enabled, setEnabled] = useState(false);
+  const noSleepRef = useRef<NoSleep | null>(null);
+
+  if (noSleepRef.current === null) {
+    noSleepRef.current = new NoSleep();
+  }
+
+  useEffect(() => {
+    const noSleep = noSleepRef.current!;
+    if (!enabled) {
+      noSleep.disable();
+      return;
+    }
+    // enable() devolve uma Promise que pode rejeitar se não houver gesto;
+    // como toggle é chamado no clique, o gesto está disponível.
+    noSleep.enable().catch(() => {});
+    // Ao voltar de segundo plano o vídeo pausa: reativa quando a aba reaparece.
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') noSleep.enable().catch(() => {});
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      document.removeEventListener('visibilitychange', onVisible);
+      noSleep.disable();
+    };
+  }, [enabled]);
+
+  return {enabled, toggle: () => setEnabled((v) => !v)};
+}
 
 // useOrientation devolve true quando a tela está em portrait (mais alta que
 // larga), para transpor o grid no celular.
@@ -38,6 +78,7 @@ export default function MobileApp() {
   const retryRef = useRef(0);
   const timerRef = useRef<number | null>(null);
   const portrait = useOrientation();
+  const keepAwake = useKeepAwake();
 
   const flashButton = useCallback((id: string, kind: 'ok' | 'err') => {
     setFlash((f) => ({...f, [id]: kind}));
@@ -51,7 +92,11 @@ export default function MobileApp() {
 
   const connect = useCallback(() => {
     const proto = window.location.protocol === 'https:' ? 'wss' : 'ws';
-    const ws = new WebSocket(`${proto}://${window.location.host}/ws`);
+    // Token de pareamento: chega na URL do QR (?t=) e é reenviado no handshake
+    // do WS. Persiste na location, então sobrevive a reconexões e reloads.
+    const token = new URLSearchParams(window.location.search).get('t') ?? '';
+    const qs = token ? `?t=${encodeURIComponent(token)}` : '';
+    const ws = new WebSocket(`${proto}://${window.location.host}/ws${qs}`);
     wsRef.current = ws;
 
     ws.onopen = () => {
@@ -123,19 +168,37 @@ export default function MobileApp() {
     <div className="flex min-h-full flex-col bg-slate-900 text-slate-100">
       <div className="flex items-center justify-between px-2">
         <StatusBar status={status} />
-        {pages.length > 1 && currentPage && (
-          <div className="flex items-center gap-2 px-2">
-            <span className="text-xs text-slate-400">{currentPage.name}</span>
-            <button
-              onClick={() => setCurrentPageId(pages[0].id)}
-              disabled={currentPage.id === pages[0].id}
-              className="rounded-md bg-slate-700 px-2 py-1 text-xs hover:bg-slate-600 disabled:opacity-30"
-              title="Voltar ao primeiro grid"
-            >
-              ⌂ Home
-            </button>
-          </div>
-        )}
+        <div className="flex items-center gap-2 px-2">
+          <button
+            onClick={keepAwake.toggle}
+            aria-pressed={keepAwake.enabled}
+            title={
+              keepAwake.enabled
+                ? 'Tela mantida ligada — toque para desligar'
+                : 'Manter a tela sempre ligada'
+            }
+            className={`rounded-md px-2 py-1 text-xs ${
+              keepAwake.enabled
+                ? 'bg-amber-400 text-slate-900'
+                : 'bg-slate-700 text-slate-100 hover:bg-slate-600'
+            }`}
+          >
+            {keepAwake.enabled ? '🔆 Tela ligada' : '🌙 Tela'}
+          </button>
+          {pages.length > 1 && currentPage && (
+            <>
+              <span className="text-xs text-slate-400">{currentPage.name}</span>
+              <button
+                onClick={() => setCurrentPageId(pages[0].id)}
+                disabled={currentPage.id === pages[0].id}
+                className="rounded-md bg-slate-700 px-2 py-1 text-xs hover:bg-slate-600 disabled:opacity-30"
+                title="Voltar ao primeiro grid"
+              >
+                ⌂ Home
+              </button>
+            </>
+          )}
+        </div>
       </div>
       <main className="flex flex-1 items-center justify-center p-4">
         {currentPage ? (

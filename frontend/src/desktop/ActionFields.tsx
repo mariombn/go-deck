@@ -1,6 +1,10 @@
 import {Action, ActionType, DiscordOp, ObsOp, StepAction} from '../types';
 import KeyCapture from './KeyCapture';
 
+// Teto da duração de "apertar e manter", em ms. Espelha o maxHoldMs do backend
+// (internal/action). 0 = toque rápido.
+export const MAX_HOLD_MS = 5000;
+
 // Rótulos amigáveis dos tipos de ação. STEP_TYPES exclui 'sequence' porque o
 // editor não expõe sequence-dentro-de-sequence (o backend até aceita, mas a
 // UI fica plana — ver CLAUDE.md/kanban).
@@ -39,7 +43,7 @@ const obsNeedsTarget = (op: ObsOp) => !!OBS_OPS.find((o) => o.value === op)?.tar
 export function emptyAction(type: ActionType): Action {
   switch (type) {
     case 'keypress':
-      return {type: 'keypress', keys: []};
+      return {type: 'keypress', keys: [], holdMs: 0};
     case 'launch':
       return {type: 'launch', path: '', args: []};
     case 'url':
@@ -59,8 +63,10 @@ export function emptyAction(type: ActionType): Action {
 // desabilitar o botão "Salvar".
 export function isActionValid(a: Action): boolean {
   switch (a.type) {
-    case 'keypress':
-      return a.keys.length > 0;
+    case 'keypress': {
+      const hold = a.holdMs ?? 0;
+      return a.keys.length > 0 && hold >= 0 && hold <= MAX_HOLD_MS;
+    }
     case 'launch':
       return a.path.trim() !== '';
     case 'url':
@@ -115,7 +121,31 @@ export default function ActionFields({value, onChange, allowSequence = true, pag
       </div>
 
       {value.type === 'keypress' && (
-        <KeyCapture value={value.keys} onChange={(keys) => onChange({type: 'keypress', keys})} />
+        <div className="space-y-3">
+          <KeyCapture value={value.keys} onChange={(keys) => onChange({...value, keys})} />
+          <div>
+            <label className="mb-1 block text-sm text-slate-400">
+              Segurar por <span className="text-slate-500">(segundos; 0 = toque rápido)</span>
+            </label>
+            <input
+              type="number"
+              min={0}
+              max={MAX_HOLD_MS / 1000}
+              step={0.1}
+              value={(value.holdMs ?? 0) / 1000}
+              onChange={(e) => {
+                const secs = parseFloat(e.target.value);
+                const ms = Number.isFinite(secs) ? Math.round(secs * 1000) : 0;
+                const clamped = Math.min(MAX_HOLD_MS, Math.max(0, ms));
+                onChange({...value, holdMs: clamped});
+              }}
+              className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 outline-none focus:border-indigo-500"
+            />
+            <p className="mt-1 text-xs text-slate-500">
+              Mantém o combo pressionado e solta após o tempo. Máx. {MAX_HOLD_MS / 1000}s.
+            </p>
+          </div>
+        </div>
       )}
 
       {value.type === 'launch' && (

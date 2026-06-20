@@ -34,6 +34,7 @@ import "C"
 import (
 	"fmt"
 	"strings"
+	"time"
 )
 
 // darwinController implementa InputController via CGEvent (CoreGraphics).
@@ -128,11 +129,14 @@ func cgLookup(name string) (uint32, bool) {
 	return code, ok
 }
 
-// SendKeys dispara um combo simultâneo via CGEvent, com a mesma semântica da
-// implementação Windows: modificadores DOWN → principais DOWN+UP → modificadores
-// UP (inverso). Os flags de modificador são aplicados nos eventos das teclas
+// SendKeys dispara um combo via CGEvent, com a mesma semântica da implementação
+// Windows. Os flags de modificador são aplicados nos eventos das teclas
 // principais, garantindo reconhecimento pelo sistema.
-func (darwinController) SendKeys(keys []string) error {
+//
+// Toque (holdMs == 0): modificadores DOWN → principais DOWN+UP → modificadores
+// UP (inverso). Apertar e manter (holdMs > 0): tudo DOWN → sleep holdMs → tudo
+// UP (inverso), mantendo o combo pressionado durante a espera.
+func (darwinController) SendKeys(keys []string, holdMs int) error {
 	if len(keys) == 0 {
 		return fmt.Errorf("combo vazio")
 	}
@@ -162,6 +166,30 @@ func (darwinController) SendKeys(keys []string) error {
 		if f, ok := macModFlags[strings.ToLower(strings.TrimSpace(k))]; ok {
 			flags |= f
 		}
+	}
+
+	if holdMs > 0 {
+		// Apertar e manter: DOWN de tudo (modificadores e principais), espera,
+		// UP de tudo na ordem inversa.
+		for _, r := range res {
+			if r.mod {
+				C.postKeyEvent(C.CGKeyCode(r.code), 0, 1)
+			}
+		}
+		for _, r := range res {
+			if !r.mod {
+				C.postKeyEvent(C.CGKeyCode(r.code), C.CGEventFlags(flags), 1)
+			}
+		}
+		time.Sleep(time.Duration(holdMs) * time.Millisecond)
+		for i := len(res) - 1; i >= 0; i-- {
+			if res[i].mod {
+				C.postKeyEvent(C.CGKeyCode(res[i].code), 0, 0)
+			} else {
+				C.postKeyEvent(C.CGKeyCode(res[i].code), C.CGEventFlags(flags), 0)
+			}
+		}
+		return nil
 	}
 
 	// 1) Modificadores DOWN.

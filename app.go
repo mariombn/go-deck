@@ -109,7 +109,7 @@ func (a *App) GetQRCode() (string, error) {
 func (a *App) TestKeypress() error {
 	time.Sleep(3 * time.Second)
 	for _, k := range []string{"h", "i"} {
-		if err := a.input.SendKeys([]string{k}); err != nil {
+		if err := a.input.SendKeys([]string{k}, 0); err != nil {
 			return err
 		}
 	}

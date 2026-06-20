@@ -1,6 +1,7 @@
 package config
 
 import (
+	"path/filepath"
 	"testing"
 
 	"go-deck/internal/action"
@@ -71,6 +72,50 @@ func TestUniqueIDsAcrossPages(t *testing.T) {
 	}
 	if len(ids) != 2 {
 		t.Fatalf("esperava 2 ids únicos, veio %d", len(ids))
+	}
+}
+
+// TestTokenGeneratedAndStable: normalize gera um token quando ausente e o
+// mantém estável em chamadas subsequentes (não regenera a cada normalize).
+func TestTokenGeneratedAndStable(t *testing.T) {
+	s := &Store{cfg: DeckConfig{}}
+	s.normalize()
+	tok := s.cfg.Server.Token
+	if tok == "" {
+		t.Fatal("normalize deveria gerar um token de pareamento")
+	}
+	s.normalize()
+	if s.cfg.Server.Token != tok {
+		t.Fatalf("token mudou entre normalizes: %q -> %q", tok, s.cfg.Server.Token)
+	}
+}
+
+// TestCloneStripsToken: a config exposta ao frontend/celular não leva o token.
+func TestCloneStripsToken(t *testing.T) {
+	s := &Store{cfg: DeckConfig{Server: Server{Port: 8754, Token: "segredo"}}}
+	s.normalize()
+	if got := s.clone(); got.Server.Token != "" {
+		t.Fatalf("clone deveria remover o token, veio %q", got.Server.Token)
+	}
+	if s.cfg.Server.Token == "" {
+		t.Fatal("clone não pode apagar o token interno do Store")
+	}
+}
+
+// TestReplacePreservesToken: salvar uma config vinda do frontend (sem token)
+// preserva o token atual, sem invalidar o pareamento.
+func TestReplacePreservesToken(t *testing.T) {
+	s := &Store{cfg: DeckConfig{}, path: filepath.Join(t.TempDir(), "config.json")}
+	s.normalize()
+	original := s.cfg.Server.Token
+
+	// Simula o save do desktop: config sem token (clone o removeu).
+	incoming := DeckConfig{Pages: s.cfg.Pages, Server: Server{Port: 8754}}
+	if _, err := s.Replace(incoming); err != nil {
+		t.Fatalf("Replace falhou: %v", err)
+	}
+	if s.cfg.Server.Token != original {
+		t.Fatalf("token deveria ser preservado: %q -> %q", original, s.cfg.Server.Token)
 	}
 }
 

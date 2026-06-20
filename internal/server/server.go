@@ -4,6 +4,7 @@
 package server
 
 import (
+	"crypto/subtle"
 	"embed"
 	"encoding/json"
 	"fmt"
@@ -111,6 +112,15 @@ var upgrader = websocket.Upgrader{
 	CheckOrigin:     sameOrigin,
 }
 
+// validToken compara, em tempo constante, o token recebido com o do Store.
+func (s *Server) validToken(got string) bool {
+	want := s.store.Token()
+	if want == "" {
+		return true // sem token (não deveria ocorrer: normalize sempre gera um)
+	}
+	return subtle.ConstantTimeCompare([]byte(got), []byte(want)) == 1
+}
+
 func sameOrigin(r *http.Request) bool {
 	origin := r.Header.Get("Origin")
 	if origin == "" {
@@ -124,6 +134,14 @@ func sameOrigin(r *http.Request) bool {
 }
 
 func (s *Server) handleWS(w http.ResponseWriter, r *http.Request) {
+	// Autenticação por token de pareamento (decisão S2): o celular obtém o
+	// token pela URL do QR (?t=) e o reenvia no handshake. Sem isso, qualquer
+	// um na LAN abriria o WS e acionaria botões (inclusive launch/url).
+	if !s.validToken(r.URL.Query().Get("t")) {
+		http.Error(w, "token de pareamento inválido", http.StatusForbidden)
+		logf("ws recusado (token inválido) de %s", r.RemoteAddr)
+		return
+	}
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		logf("upgrade falhou: %v", err)
@@ -208,6 +226,12 @@ func (s *Server) Network() NetworkInfo {
 	}
 	if s.activeIP != "" && s.boundPort != 0 {
 		info.URL = fmt.Sprintf("http://%s:%d", s.activeIP, s.boundPort)
+		// O token de pareamento viaja na própria URL (?t=), para que o celular
+		// o receba ao escanear o QR. Aparece no QR e no texto exibido — é a tela
+		// do próprio dono, então não há exposição extra.
+		if t := s.store.Token(); t != "" {
+			info.URL += "/?t=" + t
+		}
 	}
 	return info
 }

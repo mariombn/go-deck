@@ -12,8 +12,12 @@ function basename(path: string): string {
 // (no editor e no celular). Cada tipo tem sua forma resumida.
 export function actionSummary(action: Action): string {
   switch (action.type) {
-    case 'keypress':
-      return comboLabel(action.keys);
+    case 'keypress': {
+      const label = comboLabel(action.keys);
+      const hold = action.holdMs ?? 0;
+      // Formata sem casas desnecessárias: 2000ms -> "2s", 500ms -> "0.5s".
+      return hold > 0 ? `${label} · ${(hold / 1000).toString()}s` : label;
+    }
     case 'launch':
       return action.path ? '▶ ' + basename(action.path) : '▶ —';
     case 'url':

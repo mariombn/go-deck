@@ -23,6 +23,8 @@ func TestBuildValidTypes(t *testing.T) {
 		want interface{} // tipo concreto esperado
 	}{
 		{"keypress", Spec{Type: "keypress", Keys: []string{"ctrl", "c"}}, KeypressAction{}},
+		{"keypress hold", Spec{Type: "keypress", Keys: []string{"w"}, HoldMs: 2000}, KeypressAction{}},
+		{"keypress hold no limite", Spec{Type: "keypress", Keys: []string{"w"}, HoldMs: maxHoldMs}, KeypressAction{}},
 		{"launch", Spec{Type: "launch", Path: `C:\Windows\notepad.exe`, Args: []string{"x"}}, LaunchAction{}},
 		{"url", Spec{Type: "url", URL: "https://example.com"}, URLAction{}},
 		{"sequence", Spec{Type: "sequence", Steps: []Spec{{Type: "keypress", Keys: []string{"a"}}}}, SequenceAction{}},
@@ -51,6 +53,8 @@ func TestBuildValidationErrors(t *testing.T) {
 		wantSub string // trecho esperado na mensagem de erro
 	}{
 		{"keypress sem teclas", Spec{Type: "keypress"}, "sem teclas"},
+		{"keypress hold negativo", Spec{Type: "keypress", Keys: []string{"w"}, HoldMs: -1}, "retenção inválida"},
+		{"keypress hold acima do teto", Spec{Type: "keypress", Keys: []string{"w"}, HoldMs: maxHoldMs + 1}, "retenção inválida"},
 		{"launch sem path", Spec{Type: "launch"}, "sem caminho"},
 		{"url vazia", Spec{Type: "url"}, "url vazia"},
 		{"sequence sem passos", Spec{Type: "sequence"}, "sem passos"},

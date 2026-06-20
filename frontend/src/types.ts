@@ -1,7 +1,9 @@
 // Tipos compartilhados entre desktop e celular, espelhando o modelo de dados
 // do backend Go (config.DeckConfig) e o protocolo WebSocket.
 
-export type KeypressAction = { type: 'keypress'; keys: string[] };
+// holdMs: se > 0, "apertar e manter" o combo por esses milissegundos antes de
+// soltar (máx. 5000). 0/ausente = toque rápido.
+export type KeypressAction = { type: 'keypress'; keys: string[]; holdMs?: number };
 export type LaunchAction = { type: 'launch'; path: string; args?: string[] };
 export type UrlAction = { type: 'url'; url: string };
 

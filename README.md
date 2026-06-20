@@ -171,3 +171,7 @@ go-deck/
     ├── lib/                # runtime, teclas, resumo de ação, aparência/contraste
     └── types.ts            # tipos compartilhados (DeckConfig, Page, Action…)
 ```
+
+## Licença
+
+[MIT](LICENSE) © Mario de Moraes

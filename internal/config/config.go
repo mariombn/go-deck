@@ -25,6 +25,12 @@ type Grid struct {
 // Server guarda as configurações do servidor de rede.
 type Server struct {
 	Port int `json:"port"`
+	// Token é o segredo de pareamento: viaja no QR (parâmetro ?t=) e é exigido
+	// no handshake do WebSocket. É persistido para que o celular reconecte
+	// sozinho após um reinício do desktop (senão exigiria re-parear). NUNCA é
+	// enviado ao frontend/celular: clone() o remove — o celular só o conhece
+	// pela URL do QR.
+	Token string `json:"token,omitempty"`
 }
 
 // OBSConfig são os dados de conexão do obs-websocket (uma instância de OBS,
@@ -150,7 +156,16 @@ func Load() (*Store, error) {
 	if err := json.Unmarshal(data, &s.cfg); err != nil {
 		return nil, fmt.Errorf("config.json inválido: %w", err)
 	}
+	hadToken := s.cfg.Server.Token != ""
 	s.normalize()
+	// config.json antigo (pré-token): persiste o token recém-gerado para que
+	// fique estável entre reinícios — do contrário o celular precisaria
+	// re-parear a cada vez que o desktop subisse.
+	if !hadToken {
+		if err := s.save(); err != nil {
+			return nil, err
+		}
+	}
 	return s, nil
 }
 
@@ -164,12 +179,28 @@ func (s *Store) Get() DeckConfig {
 // Path devolve o caminho do arquivo de config (útil para a UI/diagnóstico).
 func (s *Store) Path() string { return s.path }
 
+// Token devolve o segredo de pareamento atual. Usado pelo servidor para validar
+// o handshake do WebSocket e para montar a URL do QR (com ?t=). Não trafega na
+// config enviada ao frontend (clone() o remove).
+func (s *Store) Token() string {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.cfg.Server.Token
+}
+
 // Replace substitui a config inteira (usado ao salvar pelo editor desktop),
 // normaliza, persiste e devolve a versão efetivamente gravada.
 func (s *Store) Replace(cfg DeckConfig) (DeckConfig, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	prevToken := s.cfg.Server.Token
 	s.cfg = cfg
+	// O frontend nunca recebe o token (clone() o remove); portanto a config que
+	// volta no save vem sem ele. Preserva o token atual para não invalidar o
+	// pareamento dos celulares já conectados.
+	if s.cfg.Server.Token == "" {
+		s.cfg.Server.Token = prevToken
+	}
 	s.normalize()
 	if err := s.save(); err != nil {
 		return DeckConfig{}, err
@@ -203,6 +234,9 @@ func (s *Store) normalize() {
 
 	if s.cfg.Server.Port <= 0 {
 		s.cfg.Server.Port = Default().Server.Port
+	}
+	if s.cfg.Server.Token == "" {
+		s.cfg.Server.Token = newToken()
 	}
 	if s.cfg.Integrations.OBS.Host == "" {
 		s.cfg.Integrations.OBS.Host = Default().Integrations.OBS.Host
@@ -275,6 +309,13 @@ func (s *Store) migrateLegacy() {
 	s.cfg.LegacyGrid, s.cfg.LegacyButtons = nil, nil
 }
 
+// newToken gera o segredo de pareamento: 16 bytes aleatórios em hex (32 chars).
+func newToken() string {
+	var raw [16]byte
+	_, _ = rand.Read(raw[:])
+	return hex.EncodeToString(raw[:])
+}
+
 // newID gera um id curto e único (prefixo + 6 hex) dentro do conjunto dado.
 func newID(prefix string, used map[string]bool) string {
 	for {
@@ -297,6 +338,10 @@ func (s *Store) save() error {
 
 func (s *Store) clone() DeckConfig {
 	c := s.cfg
+	// O segredo de pareamento nunca vai ao frontend/celular (o celular o obtém
+	// pela URL do QR). Removê-lo aqui cobre tanto GetConfig (desktop) quanto o
+	// broadcast da config aos celulares.
+	c.Server.Token = ""
 	// Deep-copy das páginas e seus botões. Importante: usar slices não-nil
 	// para que serializem como [] (não null) no JSON enviado ao frontend.
 	c.Pages = make([]Page, len(s.cfg.Pages))

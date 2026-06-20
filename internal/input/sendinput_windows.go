@@ -4,6 +4,7 @@ package input
 
 import (
 	"fmt"
+	"time"
 	"unsafe"
 
 	"golang.org/x/sys/windows"
@@ -46,11 +47,19 @@ type windowsController struct{}
 
 func newController() InputController { return windowsController{} }
 
-// SendKeys monta a sequência de eventos de um combo simultâneo e a envia
-// numa única chamada de SendInput (atômica do ponto de vista do SO):
+// SendKeys monta a sequência de eventos de um combo simultâneo e a envia.
+//
+// Toque (holdMs == 0): tudo numa única chamada de SendInput (atômica do ponto
+// de vista do SO):
 //
 //	modificadores DOWN (ordem) -> principais DOWN+UP (ordem) -> modificadores UP (inversa)
-func (windowsController) SendKeys(keys []string) error {
+//
+// Apertar e manter (holdMs > 0): duas chamadas com uma espera no meio — TODAS
+// as teclas DOWN, sleep, TODAS as teclas UP (inversa). Durante a espera o combo
+// fica fisicamente pressionado:
+//
+//	tudo DOWN (ordem) -> sleep holdMs -> tudo UP (inversa)
+func (windowsController) SendKeys(keys []string, holdMs int) error {
 	if len(keys) == 0 {
 		return fmt.Errorf("combo vazio")
 	}
@@ -69,6 +78,33 @@ func (windowsController) SendKeys(keys []string) error {
 			v   vkey
 			mod bool
 		}{v, isModifier(k)}
+	}
+
+	if holdMs > 0 {
+		// Apertar e manter: DOWN de tudo (modificadores na ordem, depois
+		// principais na ordem), espera, e UP de tudo na ordem inversa.
+		var down []rawInput
+		for _, r := range resolved {
+			if r.mod {
+				down = append(down, keyEvent(r.v, false))
+			}
+		}
+		for _, r := range resolved {
+			if !r.mod {
+				down = append(down, keyEvent(r.v, false))
+			}
+		}
+		if err := sendInputs(down); err != nil {
+			return err
+		}
+
+		time.Sleep(time.Duration(holdMs) * time.Millisecond)
+
+		var up []rawInput
+		for i := len(resolved) - 1; i >= 0; i-- {
+			up = append(up, keyEvent(resolved[i].v, true))
+		}
+		return sendInputs(up)
 	}
 
 	var events []rawInput
@@ -93,6 +129,15 @@ func (windowsController) SendKeys(keys []string) error {
 		}
 	}
 
+	return sendInputs(events)
+}
+
+// sendInputs envia um lote de eventos numa única chamada de SendInput e
+// confere que todos foram aceitos.
+func sendInputs(events []rawInput) error {
+	if len(events) == 0 {
+		return nil
+	}
 	sent, _, err := procSendInut.Call(
 		uintptr(len(events)),
 		uintptr(unsafe.Pointer(&events[0])),

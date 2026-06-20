@@ -3,6 +3,7 @@ export namespace action {
 	export class Spec {
 	    type: string;
 	    keys?: string[];
+	    holdMs?: number;
 	    path?: string;
 	    args?: string[];
 	    url?: string;
@@ -20,6 +21,7 @@ export namespace action {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.type = source["type"];
 	        this.keys = source["keys"];
+	        this.holdMs = source["holdMs"];
 	        this.path = source["path"];
 	        this.args = source["args"];
 	        this.url = source["url"];
@@ -157,6 +159,7 @@ export namespace config {
 	}
 	export class Server {
 	    port: number;
+	    token?: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new Server(source);
@@ -165,6 +168,7 @@ export namespace config {
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.port = source["port"];
+	        this.token = source["token"];
 	    }
 	}
 	export class Grid {
