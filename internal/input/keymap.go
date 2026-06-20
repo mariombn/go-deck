@@ -18,17 +18,31 @@ var modifiers = map[string]bool{
 	"win":   true,
 	"cmd":   true, // macOS Command (⌘)
 	"opt":   true, // macOS Option (⌥), alias de alt
+	// Variantes por lado de Ctrl/Alt (diferenciam esquerda x direita; o
+	// Alt direito é o AltGr em teclados ABNT2/internacionais).
+	"lctrl": true,
+	"rctrl": true,
+	"lalt":  true,
+	"ralt":  true,
 }
 
 // keymap mapeia os nomes usados no config.json para virtual-key codes do
 // Windows. Cobre o vocabulário decidido para a POC: modificadores, letras,
 // dígitos, F1–F12, especiais de navegação e teclas de mídia.
 var keymap = map[string]vkey{
-	// Modificadores
+	// Modificadores (genéricos — o SO trata como o lado esquerdo)
 	"ctrl":  {0x11, false}, // VK_CONTROL
 	"shift": {0x10, false}, // VK_SHIFT
 	"alt":   {0x12, false}, // VK_MENU
 	"win":   {0x5B, true},  // VK_LWIN (estendida)
+
+	// Modificadores específicos por lado. As variantes direitas são teclas
+	// "estendidas" — sem o flag KEYEVENTF_EXTENDEDKEY o Windows as injeta
+	// como o lado esquerdo, então o flag é o que de fato diferencia.
+	"lctrl": {0xA2, false}, // VK_LCONTROL
+	"rctrl": {0xA3, true},  // VK_RCONTROL (estendida)
+	"lalt":  {0xA4, false}, // VK_LMENU
+	"ralt":  {0xA5, true},  // VK_RMENU (AltGr — estendida)
 
 	// Especiais
 	"enter":     {0x0D, false}, // VK_RETURN

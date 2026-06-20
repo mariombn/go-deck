@@ -1,5 +1,5 @@
 import {useEffect, useState} from 'react';
-import {SPECIAL_KEYS, comboLabel, eventToCombo} from '../lib/keys';
+import {SPECIAL_KEYS, comboLabel, eventToCombo, modifierCodeToName} from '../lib/keys';
 
 interface Props {
   value: string[];
@@ -14,17 +14,33 @@ export default function KeyCapture({value, onChange}: Props) {
 
   useEffect(() => {
     if (!capturing) return;
+    // Modificadores pressionados (com o lado de Ctrl/Alt resolvido). Vão se
+    // acumulando a cada keydown até a tecla principal fechar o combo.
+    const pressed = new Set<string>();
     const onKey = (e: KeyboardEvent) => {
       e.preventDefault();
       e.stopPropagation();
-      const combo = eventToCombo(e);
+      const mod = modifierCodeToName(e.code);
+      if (mod) {
+        pressed.add(mod); // ainda esperando a tecla principal
+        return;
+      }
+      const combo = eventToCombo(e, pressed);
       if (combo) {
         onChange(combo);
         setCapturing(false);
       }
     };
+    const onKeyUp = (e: KeyboardEvent) => {
+      const mod = modifierCodeToName(e.code);
+      if (mod) pressed.delete(mod);
+    };
     window.addEventListener('keydown', onKey, true);
-    return () => window.removeEventListener('keydown', onKey, true);
+    window.addEventListener('keyup', onKeyUp, true);
+    return () => {
+      window.removeEventListener('keydown', onKey, true);
+      window.removeEventListener('keyup', onKeyUp, true);
+    };
   }, [capturing, onChange]);
 
   return (

@@ -49,6 +49,12 @@ var macModFlags = map[string]uint64{
 	"opt":   0x00080000,
 	"cmd":   0x00100000, // kCGEventFlagMaskCommand
 	"win":   0x00100000, // equivalente macOS do Win
+	// Variantes por lado — usam o mesmo bitmask genérico; a diferenciação
+	// real vem do CGKeyCode específico (esquerda x direita) em cgKeymap.
+	"lctrl": 0x00040000,
+	"rctrl": 0x00040000,
+	"lalt":  0x00080000,
+	"ralt":  0x00080000,
 }
 
 // cgKeymap mapeia nomes de teclas para CGKeyCode do macOS (layout ANSI).
@@ -60,6 +66,11 @@ var cgKeymap = map[string]uint32{
 	"opt":   58,
 	"cmd":   55, // kVK_Command
 	"win":   55,
+	// Variantes por lado (o macOS tem keycodes distintos p/ esquerda x direita)
+	"lctrl": 59, // kVK_Control (esquerdo)
+	"rctrl": 62, // kVK_RightControl
+	"lalt":  58, // kVK_Option (esquerdo)
+	"ralt":  61, // kVK_RightOption
 
 	// Especiais
 	"enter":     36,  // kVK_Return
