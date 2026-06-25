@@ -53,6 +53,27 @@ export namespace action {
 
 }
 
+export namespace appicon {
+	
+	export class AppEntry {
+	    name: string;
+	    path: string;
+	    icon: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new AppEntry(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.path = source["path"];
+	        this.icon = source["icon"];
+	    }
+	}
+
+}
+
 export namespace config {
 	
 	export class Position {
@@ -225,6 +246,7 @@ export namespace config {
 	    pages: Page[];
 	    server: Server;
 	    integrations: Integrations;
+	    language?: string;
 	    grid?: Grid;
 	    buttons?: Button[];
 	
@@ -237,6 +259,7 @@ export namespace config {
 	        this.pages = this.convertValues(source["pages"], Page);
 	        this.server = this.convertValues(source["server"], Server);
 	        this.integrations = this.convertValues(source["integrations"], Integrations);
+	        this.language = source["language"];
 	        this.grid = this.convertValues(source["grid"], Grid);
 	        this.buttons = this.convertValues(source["buttons"], Button);
 	    }

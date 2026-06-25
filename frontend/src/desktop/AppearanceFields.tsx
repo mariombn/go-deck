@@ -1,6 +1,8 @@
-import {useState} from 'react';
+import {useEffect, useState} from 'react';
+import {useTranslation} from 'react-i18next';
 import EmojiPicker, {EmojiStyle} from 'emoji-picker-react';
 import {isImageIcon, resizeImageToDataURL} from '../lib/appearance';
+import * as App from '../../wailsjs/go/main/App';
 
 interface Props {
   icon: string | undefined;
@@ -8,16 +10,24 @@ interface Props {
   onChange: (patch: {icon?: string; color?: string}) => void;
 }
 
+// AppEntry espelha appicon.AppEntry do Go (ícone é data URL PNG, vazio se a
+// extração falhou para aquele app).
+type AppEntry = {name: string; path: string; icon: string};
+
 // Paleta de cores de fundo sugeridas (Tailwind 500/600-ish).
 const PRESET_COLORS = [
   '#4f46e5', '#2563eb', '#0891b2', '#059669', '#65a30d',
   '#d97706', '#dc2626', '#db2777', '#7c3aed', '#475569',
 ];
 
-type IconMode = 'none' | 'emoji' | 'image';
+// 'app' é uma *fonte* de ícone (extrai do SO) que produz uma imagem data URL —
+// por isso, ao reabrir o editor, um ícone de app reaparece na aba 'image'
+// (isImageIcon não distingue a origem). Os dois são a mesma coisa.
+type IconMode = 'none' | 'emoji' | 'image' | 'app';
 
 // AppearanceFields edita a cor de fundo e o ícone (emoji ou imagem) do botão.
 export default function AppearanceFields({icon, color, onChange}: Props) {
+  const {t} = useTranslation();
   const [pickerOpen, setPickerOpen] = useState(false);
   const [imgErr, setImgErr] = useState('');
 
@@ -27,7 +37,8 @@ export default function AppearanceFields({icon, color, onChange}: Props) {
     setPickerOpen(false);
     setImgErr('');
     if (m === 'none') onChange({icon: ''});
-    // emoji/image só definem o icon quando o usuário escolher de fato.
+    // emoji/image só definem o icon quando o usuário escolher de fato. 'app'
+    // não limpa: é só um seletor que vai gravar uma imagem ao escolher.
     else if (m === 'emoji' && mode !== 'emoji') onChange({icon: ''});
     else if (m === 'image' && mode !== 'image') onChange({icon: ''});
     setTab(m);
@@ -44,11 +55,43 @@ export default function AppearanceFields({icon, color, onChange}: Props) {
     }
   };
 
+  // --- Aba "App": ícones de aplicativos instalados no SO ---
+  const [apps, setApps] = useState<AppEntry[] | null>(null);
+  const [appQuery, setAppQuery] = useState('');
+  const [appBusy, setAppBusy] = useState(false);
+  const [appErr, setAppErr] = useState('');
+
+  // Lista carregada sob demanda na 1ª vez que a aba é aberta (a extração de
+  // todos os ícones pode levar alguns segundos).
+  useEffect(() => {
+    if (tab !== 'app' || apps !== null) return;
+    setAppBusy(true);
+    setAppErr('');
+    App.ListInstalledApps()
+      .then((list) => setApps((list as AppEntry[]) ?? []))
+      .catch((e) => setAppErr(String(e)))
+      .finally(() => setAppBusy(false));
+  }, [tab, apps]);
+
+  // Seletor de arquivo nativo: aponta para um executável/.app e extrai o ícone.
+  const pickFromSystem = async () => {
+    setAppErr('');
+    try {
+      const data = await App.PickAppIcon();
+      if (data) onChange({icon: data});
+    } catch (e) {
+      setAppErr(String(e));
+    }
+  };
+
+  const q = appQuery.trim().toLowerCase();
+  const filteredApps = (apps ?? []).filter((a) => a.name.toLowerCase().includes(q));
+
   return (
     <div className="space-y-4">
       {/* Cor de fundo */}
       <div>
-        <label className="mb-1 block text-sm text-slate-400">Cor de fundo</label>
+        <label className="mb-1 block text-sm text-slate-400">{t('appearance.bgColor')}</label>
         <div className="flex flex-wrap items-center gap-1.5">
           {PRESET_COLORS.map((c) => (
             <button
@@ -65,23 +108,23 @@ export default function AppearanceFields({icon, color, onChange}: Props) {
             value={color || '#475569'}
             onChange={(e) => onChange({color: e.target.value})}
             className="h-6 w-8 cursor-pointer rounded border border-slate-600 bg-transparent"
-            title="Cor personalizada"
+            title={t('appearance.customColor')}
           />
           <button
             type="button"
             onClick={() => onChange({color: ''})}
             className="rounded-md px-2 py-1 text-xs text-slate-300 hover:bg-slate-700"
           >
-            padrão
+            {t('common.default')}
           </button>
         </div>
       </div>
 
       {/* Ícone */}
       <div>
-        <label className="mb-1 block text-sm text-slate-400">Ícone</label>
+        <label className="mb-1 block text-sm text-slate-400">{t('appearance.icon')}</label>
         <div className="mb-2 flex gap-1">
-          {(['none', 'emoji', 'image'] as IconMode[]).map((m) => (
+          {(['none', 'emoji', 'image', 'app'] as IconMode[]).map((m) => (
             <button
               key={m}
               type="button"
@@ -90,7 +133,7 @@ export default function AppearanceFields({icon, color, onChange}: Props) {
                 tab === m ? 'bg-indigo-600' : 'bg-slate-700 hover:bg-slate-600'
               }`}
             >
-              {m === 'none' ? 'Nenhum' : m === 'emoji' ? 'Emoji' : 'Imagem'}
+              {t(`appearance.modes.${m}`)}
             </button>
           ))}
         </div>
@@ -103,7 +146,7 @@ export default function AppearanceFields({icon, color, onChange}: Props) {
               className="flex items-center gap-2 rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm hover:border-indigo-500"
             >
               <span className="text-xl leading-none">{!isImageIcon(icon) && icon ? icon : '🙂'}</span>
-              Escolher emoji
+              {t('appearance.chooseEmoji')}
             </button>
             {pickerOpen && (
               // Overlay flutuante por cima do modal (evita empurrar a altura e
@@ -117,7 +160,7 @@ export default function AppearanceFields({icon, color, onChange}: Props) {
                     type="button"
                     onClick={() => setPickerOpen(false)}
                     className="absolute -right-3 -top-3 z-10 flex h-7 w-7 items-center justify-center rounded-full bg-slate-700 text-sm shadow-lg hover:bg-slate-600"
-                    title="Fechar"
+                    title={t('common.close')}
                   >
                     ✕
                   </button>
@@ -143,7 +186,7 @@ export default function AppearanceFields({icon, color, onChange}: Props) {
                 <img src={icon} alt="" className="h-10 w-10 rounded object-contain ring-1 ring-slate-700" />
               )}
               <label className="cursor-pointer rounded-lg bg-slate-700 px-3 py-1.5 text-sm hover:bg-slate-600">
-                {isImageIcon(icon) ? 'Trocar imagem' : 'Enviar imagem'}
+                {isImageIcon(icon) ? t('appearance.changeImage') : t('appearance.uploadImage')}
                 <input
                   type="file"
                   accept="image/*"
@@ -157,12 +200,81 @@ export default function AppearanceFields({icon, color, onChange}: Props) {
                   onClick={() => onChange({icon: ''})}
                   className="text-xs text-red-400 hover:underline"
                 >
-                  remover
+                  {t('common.remove')}
                 </button>
               )}
             </div>
             {imgErr && <p className="text-xs text-red-300">{imgErr}</p>}
-            <p className="text-xs text-slate-500">A imagem é redimensionada para 128px e embutida na config.</p>
+            <p className="text-xs text-slate-500">{t('appearance.imageHint')}</p>
+          </div>
+        )}
+
+        {tab === 'app' && (
+          <div className="space-y-2">
+            <div className="flex items-center gap-3">
+              {isImageIcon(icon) && (
+                <img src={icon} alt="" className="h-10 w-10 rounded object-contain ring-1 ring-slate-700" />
+              )}
+              <button
+                type="button"
+                onClick={pickFromSystem}
+                className="rounded-lg bg-slate-700 px-3 py-1.5 text-sm hover:bg-slate-600"
+              >
+                {t('appearance.chooseFromSystem')}
+              </button>
+              {isImageIcon(icon) && (
+                <button
+                  type="button"
+                  onClick={() => onChange({icon: ''})}
+                  className="text-xs text-red-400 hover:underline"
+                >
+                  {t('common.remove')}
+                </button>
+              )}
+            </div>
+
+            {/* Busca + galeria de apps instalados */}
+            <input
+              value={appQuery}
+              onChange={(e) => setAppQuery(e.target.value)}
+              placeholder={t('appearance.filterApps')}
+              className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm outline-none focus:border-indigo-500"
+            />
+
+            {appBusy && <p className="text-xs text-slate-400">{t('appearance.loadingApps')}</p>}
+            {appErr && <p className="text-xs text-red-300">{appErr}</p>}
+            {!appBusy && !appErr && apps !== null && filteredApps.length === 0 && (
+              <p className="text-xs text-slate-500">
+                {apps.length === 0 ? t('appearance.noApps') : t('appearance.noMatch')}
+              </p>
+            )}
+
+            {filteredApps.length > 0 && (
+              <div className="grid max-h-56 grid-cols-4 gap-1 overflow-y-auto rounded-lg border border-slate-700 bg-slate-900 p-2">
+                {filteredApps.map((a) => (
+                  <button
+                    key={a.path}
+                    type="button"
+                    onClick={() => a.icon && onChange({icon: a.icon})}
+                    disabled={!a.icon}
+                    title={a.name}
+                    className={`flex flex-col items-center gap-1 rounded-md p-1.5 text-center ${
+                      a.icon ? 'hover:bg-slate-700' : 'cursor-not-allowed opacity-40'
+                    } ${icon && a.icon === icon ? 'ring-2 ring-indigo-500' : ''}`}
+                  >
+                    {a.icon ? (
+                      <img src={a.icon} alt="" className="h-8 w-8 object-contain" />
+                    ) : (
+                      <span className="flex h-8 w-8 items-center justify-center text-slate-600">▢</span>
+                    )}
+                    <span className="line-clamp-2 w-full truncate text-[10px] leading-tight text-slate-400">
+                      {a.name}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
+            <p className="text-xs text-slate-500">{t('appearance.appIconHint')}</p>
           </div>
         )}
       </div>

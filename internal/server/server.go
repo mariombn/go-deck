@@ -17,6 +17,7 @@ import (
 
 	"go-deck/internal/action"
 	"go-deck/internal/config"
+	"go-deck/internal/i18n"
 	"go-deck/internal/input"
 	"go-deck/internal/launch"
 	"go-deck/internal/obs"
@@ -138,7 +139,7 @@ func (s *Server) handleWS(w http.ResponseWriter, r *http.Request) {
 	// token pela URL do QR (?t=) e o reenvia no handshake. Sem isso, qualquer
 	// um na LAN abriria o WS e acionaria botões (inclusive launch/url).
 	if !s.validToken(r.URL.Query().Get("t")) {
-		http.Error(w, "token de pareamento inválido", http.StatusForbidden)
+		http.Error(w, i18n.T(s.store.Language(), "errors.server.invalidToken", nil), http.StatusForbidden)
 		logf("ws recusado (token inválido) de %s", r.RemoteAddr)
 		return
 	}
@@ -155,13 +156,16 @@ func (s *Server) handleWS(w http.ResponseWriter, r *http.Request) {
 
 // press localiza o botão, constrói a ação e a executa. Devolve (ok, erro).
 func (s *Server) press(buttonID string) (bool, string) {
+	// Idioma global: a borda traduz os erros antes de devolvê-los no ACK do WS
+	// (decisões P3-A/P18). O celular exibe a string já traduzida.
+	lang := s.store.Language()
 	btn, ok := s.store.FindButton(buttonID)
 	if !ok {
-		return false, "botão não encontrado"
+		return false, i18n.T(lang, "errors.server.buttonNotFound", nil)
 	}
 	act, err := btn.Action.Build()
 	if err != nil {
-		return false, err.Error()
+		return false, i18n.Translate(lang, err)
 	}
 	cfg := s.store.Get()
 	ctx := action.ExecContext{
@@ -170,7 +174,7 @@ func (s *Server) press(buttonID string) (bool, string) {
 		OBS:      obs.New(obsSettings(cfg.Integrations.OBS)),
 	}
 	if err := act.Execute(ctx); err != nil {
-		return false, err.Error()
+		return false, i18n.Translate(lang, err)
 	}
 	logf("press %s (%s) -> %s", buttonID, btn.Label, btn.Action.Type)
 	return true, ""
@@ -240,7 +244,9 @@ func (s *Server) Network() NetworkInfo {
 func (s *Server) QRCode() (string, error) {
 	info := s.Network()
 	if info.URL == "" {
-		return "", fmt.Errorf("sem URL disponível (%s)", info.Error)
+		// Devolve um *i18n.Error nomeando a chave; a borda (binding GetQRCode)
+		// traduz. info.Error já é uma string (pode estar em branco).
+		return "", i18n.New("errors.server.noURL", map[string]any{"detail": info.Error})
 	}
 	return qrDataURL(info.URL)
 }

@@ -32,9 +32,10 @@ static void postKeyEvent(CGKeyCode keyCode, CGEventFlags flags, int down) {
 import "C"
 
 import (
-	"fmt"
 	"strings"
 	"time"
+
+	"go-deck/internal/i18n"
 )
 
 // darwinController implementa InputController via CGEvent (CoreGraphics).
@@ -138,12 +139,11 @@ func cgLookup(name string) (uint32, bool) {
 // UP (inverso), mantendo o combo pressionado durante a espera.
 func (darwinController) SendKeys(keys []string, holdMs int) error {
 	if len(keys) == 0 {
-		return fmt.Errorf("combo vazio")
+		return i18n.New("errors.input.comboEmpty", nil)
 	}
 
 	if C.ensureAccessibility() == 0 {
-		return fmt.Errorf("permissão de Acessibilidade negada — habilite o app em " +
-			"Configurações do Sistema → Privacidade e Segurança → Acessibilidade")
+		return i18n.New("errors.input.accessibilityDenied", nil)
 	}
 
 	// Valida tudo antes de enviar qualquer evento (all-or-nothing).
@@ -155,7 +155,7 @@ func (darwinController) SendKeys(keys []string, holdMs int) error {
 	for i, k := range keys {
 		code, ok := cgLookup(k)
 		if !ok {
-			return fmt.Errorf("tecla desconhecida: %q", k)
+			return i18n.New("errors.input.unknownKey", map[string]any{"key": k})
 		}
 		res[i] = resolved{code, isModifier(k)}
 	}

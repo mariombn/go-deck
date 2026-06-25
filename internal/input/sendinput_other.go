@@ -2,7 +2,7 @@
 
 package input
 
-import "fmt"
+import "go-deck/internal/i18n"
 
 // otherController é um stub para SOs ainda não suportados. A POC só tem o
 // Windows como alvo, mas manter este arquivo faz o pacote compilar em
@@ -14,5 +14,5 @@ type otherController struct{}
 func newController() InputController { return otherController{} }
 
 func (otherController) SendKeys(keys []string, holdMs int) error {
-	return fmt.Errorf("simulação de teclado não implementada neste SO (POC só suporta Windows)")
+	return i18n.New("errors.input.notImplemented", nil)
 }

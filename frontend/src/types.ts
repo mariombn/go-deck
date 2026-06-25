@@ -77,6 +77,10 @@ export interface DeckConfig {
   pages: Page[];
   server: ServerConfig;
   integrations: Integrations;
+  // Idioma global do app (ex.: "en", "pt-BR"). Fonte da verdade única, lida por
+  // desktop, celular e backend Go. Vazio = ainda não escolhido (1ª vez): o
+  // cliente detecta pelo locale do SO.
+  language?: string;
 }
 
 // --- Mensagens WebSocket ---

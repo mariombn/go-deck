@@ -1,4 +1,5 @@
 // Helpers de exibição de ações, compartilhados entre desktop e celular.
+import type {TFunction} from 'i18next';
 import {Action} from '../types';
 import {comboLabel} from './keys';
 
@@ -9,8 +10,10 @@ function basename(path: string): string {
 }
 
 // actionSummary devolve um rótulo curto da ação, exibido sob o nome do botão
-// (no editor e no celular). Cada tipo tem sua forma resumida.
-export function actionSummary(action: Action): string {
+// (no editor e no celular). Cada tipo tem sua forma resumida. Recebe `t` (de
+// useTranslation) para os trechos textuais; quem chama deve estar inscrito no
+// idioma ativo para re-renderizar ao trocar de idioma.
+export function actionSummary(action: Action, t: TFunction): string {
   switch (action.type) {
     case 'keypress': {
       const label = comboLabel(action.keys);
@@ -23,15 +26,15 @@ export function actionSummary(action: Action): string {
     case 'url':
       return action.url ? '🔗 ' + action.url.replace(/^https?:\/\//, '') : '🔗 —';
     case 'sequence':
-      return `⛓ ${action.steps.length} passo${action.steps.length === 1 ? '' : 's'}`;
+      return `⛓ ${t('actions.summary.steps', {count: action.steps.length})}`;
     case 'obs':
       switch (action.obsOp) {
         case 'scene':
           return '🎬 ' + (action.target || '—');
         case 'toggle_record':
-          return '⏺ Gravação';
+          return '⏺ ' + t('actions.summary.record');
         case 'toggle_stream':
-          return '📡 Transmissão';
+          return '📡 ' + t('actions.summary.stream');
         case 'toggle_mute':
           return '🔇 ' + (action.target || '—');
         case 'hotkey':
@@ -40,9 +43,9 @@ export function actionSummary(action: Action): string {
           return 'OBS';
       }
     case 'discord':
-      return action.discordOp === 'deafen' ? '🎧 Deafen' : '🎙 Mute';
+      return action.discordOp === 'deafen' ? '🎧 ' + t('actions.summary.deafen') : '🎙 ' + t('actions.summary.mute');
     case 'navigate':
-      return '➡ Ir para grid';
+      return '➡ ' + t('actions.summary.navigate');
     default:
       return '';
   }

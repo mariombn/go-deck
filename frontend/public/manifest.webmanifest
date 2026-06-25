@@ -1,0 +1,10 @@
+{
+  "name": "go-deck",
+  "short_name": "go-deck",
+  "description": "Controle remoto do deck pelo celular",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#0f172a",
+  "theme_color": "#0f172a",
+  "start_url": "."
+}

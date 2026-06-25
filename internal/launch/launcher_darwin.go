@@ -3,9 +3,10 @@
 package launch
 
 import (
-	"fmt"
 	"os/exec"
 	"strings"
+
+	"go-deck/internal/i18n"
 )
 
 // darwinLauncher implementa Launcher para macOS: usa "open" para bundles .app
@@ -27,7 +28,7 @@ func (darwinLauncher) Launch(path string, args []string) error {
 		cmd = exec.Command(path, args...)
 	}
 	if err := cmd.Start(); err != nil {
-		return fmt.Errorf("launch %q: %w", path, err)
+		return i18n.Wrap("errors.launch.launchFailed", map[string]any{"path": path}, err)
 	}
 	go cmd.Wait()
 	return nil
@@ -36,7 +37,7 @@ func (darwinLauncher) Launch(path string, args []string) error {
 func (darwinLauncher) OpenURL(url string) error {
 	cmd := exec.Command("open", url)
 	if err := cmd.Start(); err != nil {
-		return fmt.Errorf("open url %q: %w", url, err)
+		return i18n.Wrap("errors.launch.urlOpenFailed", map[string]any{"url": url}, err)
 	}
 	go cmd.Wait()
 	return nil

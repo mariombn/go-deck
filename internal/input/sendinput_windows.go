@@ -8,6 +8,8 @@ import (
 	"unsafe"
 
 	"golang.org/x/sys/windows"
+
+	"go-deck/internal/i18n"
 )
 
 // Flags do SendInput / KEYBDINPUT.
@@ -61,7 +63,7 @@ func newController() InputController { return windowsController{} }
 //	tudo DOWN (ordem) -> sleep holdMs -> tudo UP (inversa)
 func (windowsController) SendKeys(keys []string, holdMs int) error {
 	if len(keys) == 0 {
-		return fmt.Errorf("combo vazio")
+		return i18n.New("errors.input.comboEmpty", nil)
 	}
 
 	// Valida tudo antes de enviar qualquer evento (all-or-nothing).
@@ -72,7 +74,7 @@ func (windowsController) SendKeys(keys []string, holdMs int) error {
 	for i, k := range keys {
 		v, ok := lookup(k)
 		if !ok {
-			return fmt.Errorf("tecla desconhecida: %q", k)
+			return i18n.New("errors.input.unknownKey", map[string]any{"key": k})
 		}
 		resolved[i] = struct {
 			v   vkey
@@ -144,7 +146,9 @@ func sendInputs(events []rawInput) error {
 		uintptr(unsafe.Sizeof(rawInput{})),
 	)
 	if int(sent) != len(events) {
-		return fmt.Errorf("SendInput enviou %d de %d eventos: %v", sent, len(events), err)
+		return i18n.New("errors.input.sendFailed", map[string]any{
+			"sent": sent, "total": len(events), "detail": fmt.Sprint(err),
+		})
 	}
 	return nil
 }

@@ -1,4 +1,5 @@
 import {useState} from 'react';
+import {Trans, useTranslation} from 'react-i18next';
 import {OBSConfig} from '../types';
 import * as App from '../../wailsjs/go/main/App';
 
@@ -16,6 +17,7 @@ const testOBS = (c: OBSConfig): Promise<void> =>
 // As mudanças marcam a config como suja (via onChange); a persistência é a
 // mesma do resto (botão "Salvar configuração").
 export default function OBSPanel({value, onChange}: Props) {
+  const {t} = useTranslation();
   const [testing, setTesting] = useState(false);
   const [result, setResult] = useState<{ok: boolean; text: string} | null>(null);
 
@@ -24,7 +26,7 @@ export default function OBSPanel({value, onChange}: Props) {
     setResult(null);
     try {
       await testOBS(value);
-      setResult({ok: true, text: 'Conectado ✓'});
+      setResult({ok: true, text: t('obs.connected')});
     } catch (e) {
       setResult({ok: false, text: String(e)});
     } finally {
@@ -34,7 +36,7 @@ export default function OBSPanel({value, onChange}: Props) {
 
   return (
     <div className="mt-6 border-t border-slate-800 pt-4">
-      <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-400">OBS Studio</h2>
+      <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-400">{t('obs.title')}</h2>
 
       <label className="mb-3 flex items-center gap-2 text-sm text-slate-300">
         <input
@@ -43,13 +45,13 @@ export default function OBSPanel({value, onChange}: Props) {
           onChange={(e) => onChange({...value, enabled: e.target.checked})}
           className="h-4 w-4"
         />
-        Habilitar integração
+        {t('obs.enable')}
       </label>
 
       <div className={value.enabled ? 'space-y-2' : 'space-y-2 opacity-40'}>
         <div className="flex gap-2">
           <label className="flex-1 text-xs text-slate-400">
-            Host
+            {t('obs.host')}
             <input
               value={value.host}
               disabled={!value.enabled}
@@ -58,7 +60,7 @@ export default function OBSPanel({value, onChange}: Props) {
             />
           </label>
           <label className="w-24 text-xs text-slate-400">
-            Porta
+            {t('obs.port')}
             <input
               type="number"
               value={value.port}
@@ -69,7 +71,7 @@ export default function OBSPanel({value, onChange}: Props) {
           </label>
         </div>
         <label className="block text-xs text-slate-400">
-          Senha (obs-websocket)
+          {t('obs.password')}
           <input
             type="password"
             value={value.password}
@@ -86,7 +88,7 @@ export default function OBSPanel({value, onChange}: Props) {
             disabled={!value.enabled || testing}
             className="rounded-lg bg-slate-700 px-3 py-1.5 text-sm hover:bg-slate-600 disabled:opacity-40"
           >
-            {testing ? 'Testando…' : 'Testar conexão'}
+            {testing ? t('obs.testing') : t('obs.test')}
           </button>
           {result && (
             <span className={`text-xs ${result.ok ? 'text-green-400' : 'text-red-300'}`}>
@@ -97,8 +99,7 @@ export default function OBSPanel({value, onChange}: Props) {
       </div>
 
       <p className="mt-2 text-xs text-slate-500">
-        Ative em <i>OBS → Ferramentas → Configurações do WebSocket Server</i>. A senha fica no
-        config.json em texto puro.
+        <Trans i18nKey="obs.help" components={{1: <i />}} />
       </p>
     </div>
   );

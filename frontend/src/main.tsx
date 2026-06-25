@@ -1,6 +1,7 @@
 import React from 'react'
 import {createRoot} from 'react-dom/client'
 import './style.css'
+import './lib/i18n' // inicializa o i18next (auto-descoberta dos locales) antes do App
 import App from './App'
 
 // Overlay de diagnóstico (apenas em DEV): garante que QUALQUER erro de runtime

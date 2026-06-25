@@ -1,4 +1,5 @@
 import {useEffect, useState} from 'react';
+import {useTranslation} from 'react-i18next';
 import {SPECIAL_KEYS, comboLabel, eventToCombo, modifierCodeToName} from '../lib/keys';
 
 interface Props {
@@ -10,6 +11,7 @@ interface Props {
 // combo pelo teclado + botões fixos para as teclas que o navegador não
 // enxerga (Win e mídia).
 export default function KeyCapture({value, onChange}: Props) {
+  const {t} = useTranslation();
   const [capturing, setCapturing] = useState(false);
 
   useEffect(() => {
@@ -48,7 +50,7 @@ export default function KeyCapture({value, onChange}: Props) {
       <div className="flex items-center gap-2">
         <div className="flex-1 rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 font-mono text-sm">
           {capturing ? (
-            <span className="animate-pulse text-indigo-400">aperte o combo…</span>
+            <span className="animate-pulse text-indigo-400">{t('keyCapture.capturing')}</span>
           ) : (
             <span className="text-slate-200">{comboLabel(value)}</span>
           )}
@@ -60,12 +62,12 @@ export default function KeyCapture({value, onChange}: Props) {
             capturing ? 'bg-red-600 hover:bg-red-500' : 'bg-indigo-600 hover:bg-indigo-500'
           }`}
         >
-          {capturing ? 'Cancelar' : 'Capturar'}
+          {capturing ? t('keyCapture.cancel') : t('keyCapture.capture')}
         </button>
       </div>
 
       <div>
-        <p className="mb-1 text-xs text-slate-500">Teclas especiais (clique para definir):</p>
+        <p className="mb-1 text-xs text-slate-500">{t('keyCapture.specialKeys')}</p>
         <div className="flex flex-wrap gap-1.5">
           {SPECIAL_KEYS.map((k) => (
             <button

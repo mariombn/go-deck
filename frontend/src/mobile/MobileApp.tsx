@@ -1,7 +1,9 @@
 import {useEffect, useRef, useState, useCallback} from 'react';
+import {useTranslation} from 'react-i18next';
 import NoSleep from 'nosleep.js';
 import {ButtonConfig, DeckConfig, ServerMessage} from '../types';
 import DeckGrid from '../components/DeckGrid';
+import i18n, {setLanguage} from '../lib/i18n';
 
 type ConnStatus = 'connecting' | 'connected' | 'reconnecting';
 
@@ -62,7 +64,47 @@ function useOrientation(): boolean {
   return portrait;
 }
 
+// useFitGridWidth mede a área disponível (ref) e devolve a largura em px que o
+// grid deve ter para caber INTEIRO — em largura e altura — sem scroll. Como os
+// botões são aspect-square, basta fixar a largura: cada coluna vira `cell` e a
+// altura segue sozinha. cell = min(couber-na-largura, couber-na-altura), então
+// em paisagem é a altura que manda (era o que faltava: o grid só olhava a
+// largura). Sem piso: sempre cabe, por menor que fique (decisão do usuário).
+function useFitGridWidth(
+  ref: {current: HTMLElement | null},
+  rows: number,
+  cols: number,
+  gap = 12, // px — equivalente ao gap-3 do DeckGrid
+): number | undefined {
+  const [width, setWidth] = useState<number | undefined>(undefined);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const measure = () => {
+      const W = el.clientWidth;
+      const H = el.clientHeight;
+      if (W <= 0 || H <= 0 || rows <= 0 || cols <= 0) return;
+      const cellW = (W - (cols - 1) * gap) / cols;
+      const cellH = (H - (rows - 1) * gap) / rows;
+      const cell = Math.max(0, Math.floor(Math.min(cellW, cellH)));
+      setWidth(cell * cols + (cols - 1) * gap);
+    };
+    measure();
+    // ResizeObserver cobre rotação e mudança de viewport (o elemento
+    // redimensiona junto); orientationchange é reforço em alguns navegadores.
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    window.addEventListener('orientationchange', measure);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener('orientationchange', measure);
+    };
+  }, [ref, rows, cols, gap]);
+  return width;
+}
+
 export default function MobileApp() {
+  const {t} = useTranslation();
   const [config, setConfig] = useState<DeckConfig | null>(null);
   const [currentPageId, setCurrentPageId] = useState<string>('');
   const [status, setStatus] = useState<ConnStatus>('connecting');
@@ -77,6 +119,7 @@ export default function MobileApp() {
   const wsRef = useRef<WebSocket | null>(null);
   const retryRef = useRef(0);
   const timerRef = useRef<number | null>(null);
+  const areaRef = useRef<HTMLDivElement | null>(null);
   const portrait = useOrientation();
   const keepAwake = useKeepAwake();
 
@@ -112,10 +155,14 @@ export default function MobileApp() {
       }
       if (msg.type === 'config') {
         setConfig(msg.payload);
+        // O celular segue o idioma global do config (decisão P3-A): a config é
+        // a fonte da verdade e já trafega por broadcast.
+        if (msg.payload.language) setLanguage(msg.payload.language);
       } else if (msg.type === 'ack') {
         flashButton(msg.buttonId, msg.ok ? 'ok' : 'err');
         if (!msg.ok) {
-          setToast(msg.error || 'falha ao executar');
+          // msg.error já vem traduzido do Go; i18n.t (não-reativo) cobre o fallback.
+          setToast(msg.error || i18n.t('mobile.actionFailed'));
           window.setTimeout(() => setToast(null), 2500);
         }
       }
@@ -150,6 +197,12 @@ export default function MobileApp() {
   // numa atualização de config vinda do desktop).
   const currentPage = pages.find((p) => p.id === currentPageId) ?? pages[0];
 
+  // Dimensões exibidas já considerando a transposição em retrato (decisão 10),
+  // para o auto-ajuste calcular o tamanho certo em cada orientação.
+  const displayRows = currentPage ? (portrait ? currentPage.grid.cols : currentPage.grid.rows) : 0;
+  const displayCols = currentPage ? (portrait ? currentPage.grid.rows : currentPage.grid.cols) : 0;
+  const gridWidth = useFitGridWidth(areaRef, displayRows, displayCols);
+
   // Toque numa célula: navigate troca de página localmente (sem press); as
   // demais ações vão ao PC pelo WS.
   const onCell = (_r: number, _c: number, button: ButtonConfig | null) => {
@@ -158,32 +211,31 @@ export default function MobileApp() {
       const {targetPage} = button.action;
       const target = pages.find((p) => p.id === targetPage);
       if (target) setCurrentPageId(target.id);
-      else showToast('grid de destino não encontrado');
+      else showToast(t('mobile.navNotFound'));
       return;
     }
     press(button.id);
   };
 
   return (
-    <div className="flex min-h-full flex-col bg-slate-900 text-slate-100">
-      <div className="flex items-center justify-between px-2">
+    // h-[100dvh] + overflow-hidden: ocupa exatamente a área VISÍVEL (descontando
+    // a barra do navegador no celular) e nunca rola. É o que, junto do
+    // auto-ajuste, faz o grid inteiro caber sem scroll.
+    <div className="flex h-[100dvh] flex-col overflow-hidden bg-slate-900 text-slate-100">
+      <div className="flex shrink-0 items-center justify-between px-2">
         <StatusBar status={status} />
         <div className="flex items-center gap-2 px-2">
           <button
             onClick={keepAwake.toggle}
             aria-pressed={keepAwake.enabled}
-            title={
-              keepAwake.enabled
-                ? 'Tela mantida ligada — toque para desligar'
-                : 'Manter a tela sempre ligada'
-            }
+            title={keepAwake.enabled ? t('mobile.keepAwakeOnTitle') : t('mobile.keepAwakeOffTitle')}
             className={`rounded-md px-2 py-1 text-xs ${
               keepAwake.enabled
                 ? 'bg-amber-400 text-slate-900'
                 : 'bg-slate-700 text-slate-100 hover:bg-slate-600'
             }`}
           >
-            {keepAwake.enabled ? '🔆 Tela ligada' : '🌙 Tela'}
+            {keepAwake.enabled ? t('mobile.keepAwakeOn') : t('mobile.keepAwakeOff')}
           </button>
           {pages.length > 1 && currentPage && (
             <>
@@ -192,28 +244,32 @@ export default function MobileApp() {
                 onClick={() => setCurrentPageId(pages[0].id)}
                 disabled={currentPage.id === pages[0].id}
                 className="rounded-md bg-slate-700 px-2 py-1 text-xs hover:bg-slate-600 disabled:opacity-30"
-                title="Voltar ao primeiro grid"
+                title={t('mobile.homeTitle')}
               >
-                ⌂ Home
+                {t('mobile.home')}
               </button>
             </>
           )}
         </div>
       </div>
-      <main className="flex flex-1 items-center justify-center p-4">
-        {currentPage ? (
-          <div className="w-full max-w-2xl">
-            <DeckGrid
-              page={currentPage}
-              mode="mobile"
-              transpose={portrait}
-              flash={flash}
-              onCellClick={onCell}
-            />
-          </div>
-        ) : (
-          <p className="text-slate-400">Aguardando configuração…</p>
-        )}
+      <main className="flex min-h-0 flex-1 items-center justify-center p-3">
+        {/* areaRef mede o espaço livre; o grid recebe a largura calculada para
+            caber em largura E altura. min-h-0 deixa o flex encolher de fato. */}
+        <div ref={areaRef} className="flex h-full w-full items-center justify-center">
+          {currentPage ? (
+            <div style={{width: gridWidth}}>
+              <DeckGrid
+                page={currentPage}
+                mode="mobile"
+                transpose={portrait}
+                flash={flash}
+                onCellClick={onCell}
+              />
+            </div>
+          ) : (
+            <p className="text-slate-400">{t('mobile.waiting')}</p>
+          )}
+        </div>
       </main>
       {toast && (
         <div className="fixed bottom-4 left-1/2 -translate-x-1/2 rounded-lg bg-red-600 px-4 py-2 text-sm shadow-lg">
@@ -225,15 +281,16 @@ export default function MobileApp() {
 }
 
 function StatusBar({status}: {status: ConnStatus}) {
+  const {t} = useTranslation();
   const map = {
-    connecting: {color: 'bg-amber-400', text: 'Conectando…'},
-    connected: {color: 'bg-green-400', text: 'Conectado'},
-    reconnecting: {color: 'bg-red-400', text: 'Reconectando…'},
+    connecting: {color: 'bg-amber-400', key: 'mobile.status.connecting'},
+    connected: {color: 'bg-green-400', key: 'mobile.status.connected'},
+    reconnecting: {color: 'bg-red-400', key: 'mobile.status.reconnecting'},
   }[status];
   return (
     <div className="flex items-center gap-2 px-4 py-2 text-xs text-slate-400">
       <span className={`inline-block h-2 w-2 rounded-full ${map.color}`} />
-      {map.text}
+      {t(map.key)}
     </div>
   );
 }

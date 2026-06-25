@@ -1,3 +1,4 @@
+import {Trans, useTranslation} from 'react-i18next';
 import {Action, ActionType, DiscordOp, ObsOp, StepAction} from '../types';
 import KeyCapture from './KeyCapture';
 
@@ -5,38 +6,38 @@ import KeyCapture from './KeyCapture';
 // (internal/action). 0 = toque rápido.
 export const MAX_HOLD_MS = 5000;
 
-// Rótulos amigáveis dos tipos de ação. STEP_TYPES exclui 'sequence' porque o
-// editor não expõe sequence-dentro-de-sequence (o backend até aceita, mas a
-// UI fica plana — ver CLAUDE.md/kanban).
-export const ACTION_TYPES: {value: ActionType; label: string}[] = [
-  {value: 'keypress', label: 'Atalho de teclas'},
-  {value: 'launch', label: 'Abrir programa'},
-  {value: 'url', label: 'Abrir URL'},
-  {value: 'obs', label: 'OBS Studio'},
-  {value: 'discord', label: 'Discord'},
-  {value: 'navigate', label: 'Ir para outro grid'},
-  {value: 'sequence', label: 'Sequência'},
+// Tipos de ação. labelKey aponta para a tradução (rótulo amigável). STEP_TYPES
+// exclui 'sequence' porque o editor não expõe sequence-dentro-de-sequence (o
+// backend até aceita, mas a UI fica plana — ver CLAUDE.md/kanban).
+export const ACTION_TYPES: {value: ActionType; labelKey: string}[] = [
+  {value: 'keypress', labelKey: 'actions.types.keypress'},
+  {value: 'launch', labelKey: 'actions.types.launch'},
+  {value: 'url', labelKey: 'actions.types.url'},
+  {value: 'obs', labelKey: 'actions.types.obs'},
+  {value: 'discord', labelKey: 'actions.types.discord'},
+  {value: 'navigate', labelKey: 'actions.types.navigate'},
+  {value: 'sequence', labelKey: 'actions.types.sequence'},
 ];
 // Passos de sequence excluem 'sequence' (sem aninhamento na UI) e 'navigate'
 // (navegação é client-side, não se mistura com ações executadas no PC).
 export const STEP_TYPES = ACTION_TYPES.filter((t) => t.value !== 'sequence' && t.value !== 'navigate');
 
-// Operações do OBS. targetLabel presente => a operação exige um alvo
+// Operações do OBS. targetLabelKey presente => a operação exige um alvo
 // (cena/fonte/hotkey); ausente => não precisa (toggles).
-export const OBS_OPS: {value: ObsOp; label: string; targetLabel?: string}[] = [
-  {value: 'scene', label: 'Trocar de cena', targetLabel: 'Nome da cena'},
-  {value: 'toggle_record', label: 'Gravação (liga/desliga)'},
-  {value: 'toggle_stream', label: 'Transmissão (liga/desliga)'},
-  {value: 'toggle_mute', label: 'Mudo da fonte (liga/desliga)', targetLabel: 'Nome da fonte de áudio'},
-  {value: 'hotkey', label: 'Disparar hotkey', targetLabel: 'Nome da hotkey do OBS'},
+export const OBS_OPS: {value: ObsOp; labelKey: string; targetLabelKey?: string}[] = [
+  {value: 'scene', labelKey: 'actions.obs.ops.scene', targetLabelKey: 'actions.obs.ops.sceneTarget'},
+  {value: 'toggle_record', labelKey: 'actions.obs.ops.toggleRecord'},
+  {value: 'toggle_stream', labelKey: 'actions.obs.ops.toggleStream'},
+  {value: 'toggle_mute', labelKey: 'actions.obs.ops.toggleMute', targetLabelKey: 'actions.obs.ops.toggleMuteTarget'},
+  {value: 'hotkey', labelKey: 'actions.obs.ops.hotkey', targetLabelKey: 'actions.obs.ops.hotkeyTarget'},
 ];
 
-const DISCORD_OPS: {value: DiscordOp; label: string}[] = [
-  {value: 'mute', label: 'Alternar mudo (mute)'},
-  {value: 'deafen', label: 'Alternar surdo (deafen)'},
+const DISCORD_OPS: {value: DiscordOp; labelKey: string}[] = [
+  {value: 'mute', labelKey: 'actions.discord.ops.mute'},
+  {value: 'deafen', labelKey: 'actions.discord.ops.deafen'},
 ];
 
-const obsNeedsTarget = (op: ObsOp) => !!OBS_OPS.find((o) => o.value === op)?.targetLabel;
+const obsNeedsTarget = (op: ObsOp) => !!OBS_OPS.find((o) => o.value === op)?.targetLabelKey;
 
 // emptyAction devolve uma ação "em branco" do tipo pedido (ao trocar o tipo
 // no dropdown, recomeçamos com os campos do novo tipo).
@@ -101,20 +102,21 @@ interface FieldsProps {
 // ActionFields renderiza o seletor de tipo + os campos do tipo selecionado.
 // É reutilizado no nível do botão e em cada passo de um sequence.
 export default function ActionFields({value, onChange, allowSequence = true, pages = []}: FieldsProps) {
+  const {t} = useTranslation();
   const types = allowSequence ? ACTION_TYPES : STEP_TYPES;
 
   return (
     <div className="space-y-3">
       <div>
-        <label className="mb-1 block text-sm text-slate-400">Tipo de ação</label>
+        <label className="mb-1 block text-sm text-slate-400">{t('actions.typeLabel')}</label>
         <select
           value={value.type}
           onChange={(e) => onChange(emptyAction(e.target.value as ActionType))}
           className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 outline-none focus:border-indigo-500"
         >
-          {types.map((t) => (
-            <option key={t.value} value={t.value}>
-              {t.label}
+          {types.map((ty) => (
+            <option key={ty.value} value={ty.value}>
+              {t(ty.labelKey)}
             </option>
           ))}
         </select>
@@ -125,7 +127,7 @@ export default function ActionFields({value, onChange, allowSequence = true, pag
           <KeyCapture value={value.keys} onChange={(keys) => onChange({...value, keys})} />
           <div>
             <label className="mb-1 block text-sm text-slate-400">
-              Segurar por <span className="text-slate-500">(segundos; 0 = toque rápido)</span>
+              {t('actions.keypress.holdLabel')} <span className="text-slate-500">{t('actions.keypress.holdHint')}</span>
             </label>
             <input
               type="number"
@@ -142,7 +144,7 @@ export default function ActionFields({value, onChange, allowSequence = true, pag
               className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 outline-none focus:border-indigo-500"
             />
             <p className="mt-1 text-xs text-slate-500">
-              Mantém o combo pressionado e solta após o tempo. Máx. {MAX_HOLD_MS / 1000}s.
+              {t('actions.keypress.holdHelp', {max: MAX_HOLD_MS / 1000})}
             </p>
           </div>
         </div>
@@ -151,17 +153,17 @@ export default function ActionFields({value, onChange, allowSequence = true, pag
       {value.type === 'launch' && (
         <div className="space-y-3">
           <div>
-            <label className="mb-1 block text-sm text-slate-400">Caminho do programa</label>
+            <label className="mb-1 block text-sm text-slate-400">{t('actions.launch.pathLabel')}</label>
             <input
               value={value.path}
               onChange={(e) => onChange({...value, path: e.target.value})}
-              placeholder="Ex.: C:\Windows\notepad.exe"
+              placeholder={t('actions.launch.pathPlaceholder')}
               className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 font-mono text-sm outline-none focus:border-indigo-500"
             />
           </div>
           <div>
             <label className="mb-1 block text-sm text-slate-400">
-              Argumentos <span className="text-slate-500">(um por linha, opcional)</span>
+              {t('actions.launch.argsLabel')} <span className="text-slate-500">{t('actions.launch.argsHint')}</span>
             </label>
             <textarea
               value={argsToText(value.args)}
@@ -176,11 +178,11 @@ export default function ActionFields({value, onChange, allowSequence = true, pag
 
       {value.type === 'url' && (
         <div>
-          <label className="mb-1 block text-sm text-slate-400">URL</label>
+          <label className="mb-1 block text-sm text-slate-400">{t('actions.url.label')}</label>
           <input
             value={value.url}
             onChange={(e) => onChange({type: 'url', url: e.target.value})}
-            placeholder="https://exemplo.com"
+            placeholder={t('actions.url.placeholder')}
             className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 font-mono text-sm outline-none focus:border-indigo-500"
           />
         </div>
@@ -189,7 +191,7 @@ export default function ActionFields({value, onChange, allowSequence = true, pag
       {value.type === 'obs' && (
         <div className="space-y-3">
           <div>
-            <label className="mb-1 block text-sm text-slate-400">Operação</label>
+            <label className="mb-1 block text-sm text-slate-400">{t('actions.obs.opLabel')}</label>
             <select
               value={value.obsOp}
               onChange={(e) => onChange({...value, obsOp: e.target.value as ObsOp})}
@@ -197,7 +199,7 @@ export default function ActionFields({value, onChange, allowSequence = true, pag
             >
               {OBS_OPS.map((o) => (
                 <option key={o.value} value={o.value}>
-                  {o.label}
+                  {t(o.labelKey)}
                 </option>
               ))}
             </select>
@@ -205,18 +207,18 @@ export default function ActionFields({value, onChange, allowSequence = true, pag
           {obsNeedsTarget(value.obsOp) && (
             <div>
               <label className="mb-1 block text-sm text-slate-400">
-                {OBS_OPS.find((o) => o.value === value.obsOp)?.targetLabel}
+                {t(OBS_OPS.find((o) => o.value === value.obsOp)!.targetLabelKey!)}
               </label>
               <input
                 value={value.target ?? ''}
                 onChange={(e) => onChange({...value, target: e.target.value})}
-                placeholder="Exatamente como aparece no OBS"
+                placeholder={t('actions.obs.targetPlaceholder')}
                 className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 font-mono text-sm outline-none focus:border-indigo-500"
               />
             </div>
           )}
           <p className="text-xs text-slate-500">
-            Requer o obs-websocket habilitado no OBS e a conexão configurada no painel lateral.
+            {t('actions.obs.help')}
           </p>
         </div>
       )}
@@ -224,7 +226,7 @@ export default function ActionFields({value, onChange, allowSequence = true, pag
       {value.type === 'discord' && (
         <div className="space-y-3">
           <div>
-            <label className="mb-1 block text-sm text-slate-400">Ação</label>
+            <label className="mb-1 block text-sm text-slate-400">{t('actions.discord.opLabel')}</label>
             <select
               value={value.discordOp}
               onChange={(e) => onChange({...value, discordOp: e.target.value as DiscordOp})}
@@ -232,31 +234,30 @@ export default function ActionFields({value, onChange, allowSequence = true, pag
             >
               {DISCORD_OPS.map((o) => (
                 <option key={o.value} value={o.value}>
-                  {o.label}
+                  {t(o.labelKey)}
                 </option>
               ))}
             </select>
           </div>
           <div>
-            <label className="mb-1 block text-sm text-slate-400">Tecla do keybind</label>
+            <label className="mb-1 block text-sm text-slate-400">{t('actions.discord.keyLabel')}</label>
             <KeyCapture value={value.keys} onChange={(keys) => onChange({...value, keys})} />
           </div>
           <p className="rounded-lg bg-amber-500/10 p-2 text-xs text-amber-300">
-            O Discord não expõe controle por rede: configure este atalho como <b>keybind global</b> nas
-            Configurações → Atalhos de Teclado do Discord e capture aqui a mesma tecla.
+            <Trans i18nKey="actions.discord.help" components={{1: <b />}} />
           </p>
         </div>
       )}
 
       {value.type === 'navigate' && (
         <div>
-          <label className="mb-1 block text-sm text-slate-400">Grid de destino</label>
+          <label className="mb-1 block text-sm text-slate-400">{t('actions.navigate.label')}</label>
           <select
             value={value.targetPage}
             onChange={(e) => onChange({type: 'navigate', targetPage: e.target.value})}
             className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 outline-none focus:border-indigo-500"
           >
-            <option value="">— selecione —</option>
+            <option value="">{t('actions.navigate.select')}</option>
             {pages.map((p) => (
               <option key={p.id} value={p.id}>
                 {p.name}
@@ -264,7 +265,7 @@ export default function ActionFields({value, onChange, allowSequence = true, pag
             ))}
           </select>
           <p className="mt-2 text-xs text-slate-500">
-            Ao tocar no celular, troca para este grid (não envia nada ao PC).
+            {t('actions.navigate.help')}
           </p>
         </div>
       )}
@@ -285,6 +286,7 @@ interface SequenceProps {
 // (setas ↑↓ — drag-and-drop é outro item do kanban). Cada passo é um
 // ActionFields sem a opção 'sequence'.
 function SequenceFields({value, onChange}: SequenceProps) {
+  const {t} = useTranslation();
   const update = (i: number, a: Action) => {
     const next = value.slice();
     next[i] = a as StepAction;
@@ -302,21 +304,21 @@ function SequenceFields({value, onChange}: SequenceProps) {
 
   return (
     <div className="space-y-3">
-      <span className="block text-sm text-slate-400">Passos (executados em ordem)</span>
+      <span className="block text-sm text-slate-400">{t('actions.sequence.steps')}</span>
       {value.length === 0 && (
-        <p className="text-xs text-slate-500">Nenhum passo ainda. Adicione o primeiro abaixo.</p>
+        <p className="text-xs text-slate-500">{t('actions.sequence.empty')}</p>
       )}
       {value.map((step, i) => (
         <div key={i} className="rounded-xl border border-slate-700 bg-slate-900/50 p-3">
           <div className="mb-2 flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-400">Passo {i + 1}</span>
+            <span className="text-xs font-semibold text-slate-400">{t('actions.sequence.step', {n: i + 1})}</span>
             <div className="flex items-center gap-1">
               <button
                 type="button"
                 onClick={() => move(i, -1)}
                 disabled={i === 0}
                 className="rounded px-2 py-1 text-xs text-slate-300 hover:bg-slate-700 disabled:opacity-30"
-                title="Mover para cima"
+                title={t('actions.sequence.moveUp')}
               >
                 ↑
               </button>
@@ -325,7 +327,7 @@ function SequenceFields({value, onChange}: SequenceProps) {
                 onClick={() => move(i, 1)}
                 disabled={i === value.length - 1}
                 className="rounded px-2 py-1 text-xs text-slate-300 hover:bg-slate-700 disabled:opacity-30"
-                title="Mover para baixo"
+                title={t('actions.sequence.moveDown')}
               >
                 ↓
               </button>
@@ -333,7 +335,7 @@ function SequenceFields({value, onChange}: SequenceProps) {
                 type="button"
                 onClick={() => remove(i)}
                 className="rounded px-2 py-1 text-xs text-red-400 hover:bg-red-500/10"
-                title="Remover passo"
+                title={t('actions.sequence.removeStep')}
               >
                 ✕
               </button>
@@ -347,7 +349,7 @@ function SequenceFields({value, onChange}: SequenceProps) {
         onClick={add}
         className="w-full rounded-lg border border-dashed border-slate-600 px-3 py-2 text-sm text-slate-300 hover:border-indigo-500 hover:text-indigo-300"
       >
-        + Adicionar passo
+        {t('actions.sequence.addStep')}
       </button>
     </div>
   );
