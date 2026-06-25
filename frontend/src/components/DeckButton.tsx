@@ -1,3 +1,4 @@
+import {useTranslation} from 'react-i18next';
 import {ButtonConfig} from '../types';
 import {actionSummary} from '../lib/actions';
 import {isImageIcon, textColorFor} from '../lib/appearance';
@@ -14,6 +15,7 @@ interface Props {
 // celular fica inerte. Aparência: cor de fundo (com contraste automático do
 // texto) e um ícone que é emoji ou imagem (data URL).
 export default function DeckButton({button, mode, flash, onClick}: Props) {
+  const {t} = useTranslation();
   const base =
     'aspect-square rounded-2xl flex flex-col items-center justify-center p-2 text-center select-none transition overflow-hidden';
 
@@ -66,7 +68,7 @@ export default function DeckButton({button, mode, flash, onClick}: Props) {
         ))}
       {!big && (
         <span className="text-base font-semibold leading-tight line-clamp-2" style={useColor ? undefined : {color: '#fff'}}>
-          {button.label || (button.icon ? '' : '(sem nome)')}
+          {button.label || (button.icon ? '' : t('common.noName'))}
         </span>
       )}
       {mode === 'desktop' && (
@@ -74,7 +76,7 @@ export default function DeckButton({button, mode, flash, onClick}: Props) {
           className={`mt-1 text-[10px] font-mono line-clamp-1 ${useColor ? 'opacity-70' : 'text-slate-300/80'}`}
           style={useColor ? {color: textColorFor(button.color)} : undefined}
         >
-          {actionSummary(button.action)}
+          {actionSummary(button.action, t)}
         </span>
       )}
     </button>

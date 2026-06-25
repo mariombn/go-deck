@@ -1,7 +1,9 @@
 import {useEffect, useRef, useState, useCallback} from 'react';
+import {useTranslation} from 'react-i18next';
 import NoSleep from 'nosleep.js';
 import {ButtonConfig, DeckConfig, ServerMessage} from '../types';
 import DeckGrid from '../components/DeckGrid';
+import i18n, {setLanguage} from '../lib/i18n';
 
 type ConnStatus = 'connecting' | 'connected' | 'reconnecting';
 
@@ -102,6 +104,7 @@ function useFitGridWidth(
 }
 
 export default function MobileApp() {
+  const {t} = useTranslation();
   const [config, setConfig] = useState<DeckConfig | null>(null);
   const [currentPageId, setCurrentPageId] = useState<string>('');
   const [status, setStatus] = useState<ConnStatus>('connecting');
@@ -152,10 +155,14 @@ export default function MobileApp() {
       }
       if (msg.type === 'config') {
         setConfig(msg.payload);
+        // O celular segue o idioma global do config (decisão P3-A): a config é
+        // a fonte da verdade e já trafega por broadcast.
+        if (msg.payload.language) setLanguage(msg.payload.language);
       } else if (msg.type === 'ack') {
         flashButton(msg.buttonId, msg.ok ? 'ok' : 'err');
         if (!msg.ok) {
-          setToast(msg.error || 'falha ao executar');
+          // msg.error já vem traduzido do Go; i18n.t (não-reativo) cobre o fallback.
+          setToast(msg.error || i18n.t('mobile.actionFailed'));
           window.setTimeout(() => setToast(null), 2500);
         }
       }
@@ -204,7 +211,7 @@ export default function MobileApp() {
       const {targetPage} = button.action;
       const target = pages.find((p) => p.id === targetPage);
       if (target) setCurrentPageId(target.id);
-      else showToast('grid de destino não encontrado');
+      else showToast(t('mobile.navNotFound'));
       return;
     }
     press(button.id);
@@ -221,18 +228,14 @@ export default function MobileApp() {
           <button
             onClick={keepAwake.toggle}
             aria-pressed={keepAwake.enabled}
-            title={
-              keepAwake.enabled
-                ? 'Tela mantida ligada — toque para desligar'
-                : 'Manter a tela sempre ligada'
-            }
+            title={keepAwake.enabled ? t('mobile.keepAwakeOnTitle') : t('mobile.keepAwakeOffTitle')}
             className={`rounded-md px-2 py-1 text-xs ${
               keepAwake.enabled
                 ? 'bg-amber-400 text-slate-900'
                 : 'bg-slate-700 text-slate-100 hover:bg-slate-600'
             }`}
           >
-            {keepAwake.enabled ? '🔆 Tela ligada' : '🌙 Tela'}
+            {keepAwake.enabled ? t('mobile.keepAwakeOn') : t('mobile.keepAwakeOff')}
           </button>
           {pages.length > 1 && currentPage && (
             <>
@@ -241,9 +244,9 @@ export default function MobileApp() {
                 onClick={() => setCurrentPageId(pages[0].id)}
                 disabled={currentPage.id === pages[0].id}
                 className="rounded-md bg-slate-700 px-2 py-1 text-xs hover:bg-slate-600 disabled:opacity-30"
-                title="Voltar ao primeiro grid"
+                title={t('mobile.homeTitle')}
               >
-                ⌂ Home
+                {t('mobile.home')}
               </button>
             </>
           )}
@@ -264,7 +267,7 @@ export default function MobileApp() {
               />
             </div>
           ) : (
-            <p className="text-slate-400">Aguardando configuração…</p>
+            <p className="text-slate-400">{t('mobile.waiting')}</p>
           )}
         </div>
       </main>
@@ -278,15 +281,16 @@ export default function MobileApp() {
 }
 
 function StatusBar({status}: {status: ConnStatus}) {
+  const {t} = useTranslation();
   const map = {
-    connecting: {color: 'bg-amber-400', text: 'Conectando…'},
-    connected: {color: 'bg-green-400', text: 'Conectado'},
-    reconnecting: {color: 'bg-red-400', text: 'Reconectando…'},
+    connecting: {color: 'bg-amber-400', key: 'mobile.status.connecting'},
+    connected: {color: 'bg-green-400', key: 'mobile.status.connected'},
+    reconnecting: {color: 'bg-red-400', key: 'mobile.status.reconnecting'},
   }[status];
   return (
     <div className="flex items-center gap-2 px-4 py-2 text-xs text-slate-400">
       <span className={`inline-block h-2 w-2 rounded-full ${map.color}`} />
-      {map.text}
+      {t(map.key)}
     </div>
   );
 }

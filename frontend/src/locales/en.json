@@ -1,0 +1,245 @@
+{
+  "_meta": {
+    "nativeName": "English",
+    "englishName": "English"
+  },
+  "common": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "close": "Close",
+    "delete": "Delete",
+    "remove": "remove",
+    "default": "default",
+    "none": "None",
+    "loading": "Loading…",
+    "noName": "(no name)"
+  },
+  "app": {
+    "title": "go-deck"
+  },
+  "header": {
+    "settings": "Settings",
+    "saveConfig": "Save configuration",
+    "saved": "Saved ✓"
+  },
+  "grids": {
+    "heading": "Grids",
+    "noPages": "No pages.",
+    "newGrid": "+ New grid",
+    "gridName": "Grid name",
+    "delete": "delete",
+    "reorder": "Drag to reorder",
+    "reorderAria": "Reorder grid",
+    "rows": "Rows",
+    "cols": "Columns",
+    "cellHint": "Click a cell to add or edit a button.",
+    "landscape": "🖥️ Landscape",
+    "portrait": "📱 Portrait",
+    "landscapeTitle": "Preview as a phone held sideways",
+    "portraitTitle": "Preview as a phone held upright",
+    "deleteConfirm": "Delete the grid \"{{name}}\" and its buttons?",
+    "shrinkConfirm_one": "{{count}} button falls outside the new grid and will be removed. Continue?",
+    "shrinkConfirm_other": "{{count}} buttons fall outside the new grid and will be removed. Continue?"
+  },
+  "buttonEditor": {
+    "new": "New button",
+    "edit": "Edit button",
+    "position": "row {{row}} · column {{col}}",
+    "label": "Label",
+    "labelPlaceholder": "E.g.: Mute Mic",
+    "appearance": "Appearance",
+    "save": "Save button"
+  },
+  "actions": {
+    "typeLabel": "Action type",
+    "types": {
+      "keypress": "Keyboard shortcut",
+      "launch": "Open program",
+      "url": "Open URL",
+      "obs": "OBS Studio",
+      "discord": "Discord",
+      "navigate": "Go to another grid",
+      "sequence": "Sequence"
+    },
+    "keypress": {
+      "holdLabel": "Hold for",
+      "holdHint": "(seconds; 0 = quick tap)",
+      "holdHelp": "Keeps the combo pressed and releases after the time. Max {{max}}s."
+    },
+    "launch": {
+      "pathLabel": "Program path",
+      "pathPlaceholder": "E.g.: C:\\Windows\\notepad.exe",
+      "argsLabel": "Arguments",
+      "argsHint": "(one per line, optional)"
+    },
+    "url": {
+      "label": "URL",
+      "placeholder": "https://example.com"
+    },
+    "obs": {
+      "opLabel": "Operation",
+      "targetPlaceholder": "Exactly as it appears in OBS",
+      "help": "Requires obs-websocket enabled in OBS and the connection set up in the side panel.",
+      "ops": {
+        "scene": "Switch scene",
+        "sceneTarget": "Scene name",
+        "toggleRecord": "Recording (on/off)",
+        "toggleStream": "Streaming (on/off)",
+        "toggleMute": "Source mute (on/off)",
+        "toggleMuteTarget": "Audio source name",
+        "hotkey": "Trigger hotkey",
+        "hotkeyTarget": "OBS hotkey name"
+      }
+    },
+    "discord": {
+      "opLabel": "Action",
+      "keyLabel": "Keybind key",
+      "help": "Discord exposes no network control: set this shortcut as a <1>global keybind</1> in Discord's Settings → Keybinds and capture the same key here.",
+      "ops": {
+        "mute": "Toggle mute",
+        "deafen": "Toggle deafen"
+      }
+    },
+    "navigate": {
+      "label": "Target grid",
+      "select": "— select —",
+      "help": "On tap (phone), switches to this grid (nothing is sent to the PC)."
+    },
+    "sequence": {
+      "steps": "Steps (run in order)",
+      "empty": "No steps yet. Add the first one below.",
+      "step": "Step {{n}}",
+      "moveUp": "Move up",
+      "moveDown": "Move down",
+      "removeStep": "Remove step",
+      "addStep": "+ Add step"
+    },
+    "summary": {
+      "record": "Recording",
+      "stream": "Streaming",
+      "deafen": "Deafen",
+      "mute": "Mute",
+      "navigate": "Go to grid",
+      "steps_one": "{{count}} step",
+      "steps_other": "{{count}} steps"
+    }
+  },
+  "appearance": {
+    "bgColor": "Background color",
+    "customColor": "Custom color",
+    "icon": "Icon",
+    "modes": {
+      "none": "None",
+      "emoji": "Emoji",
+      "image": "Image",
+      "app": "App"
+    },
+    "chooseEmoji": "Choose emoji",
+    "changeImage": "Change image",
+    "uploadImage": "Upload image",
+    "imageHint": "The image is resized to 128px and embedded in the config.",
+    "chooseFromSystem": "Choose from system…",
+    "filterApps": "Filter apps…",
+    "loadingApps": "Loading apps…",
+    "noApps": "No apps found.",
+    "noMatch": "Nothing matches the filter.",
+    "appIconHint": "Icon resized to 128px and embedded in the config.",
+    "appDialog": {
+      "title": "Choose application",
+      "exeFilter": "Applications (*.exe, *.lnk)",
+      "appFilter": "Applications (*.app)"
+    }
+  },
+  "keyCapture": {
+    "capturing": "press the combo…",
+    "capture": "Capture",
+    "cancel": "Cancel",
+    "specialKeys": "Special keys (click to set):"
+  },
+  "config": {
+    "title": "Settings",
+    "tabs": {
+      "mobile": "Phone/QR",
+      "obs": "OBS"
+    },
+    "language": "Language",
+    "mobileAccess": "Phone access",
+    "ipLabel": "Network IP (change if the QR won't connect)",
+    "securityNotice": "🔒 Access is token-protected: only devices that scan this QR can trigger the buttons. Do not share the QR/link. No HTTPS — the token travels over the LAN in plain text, so use it only on trusted networks."
+  },
+  "obs": {
+    "title": "OBS Studio",
+    "enable": "Enable integration",
+    "host": "Host",
+    "port": "Port",
+    "password": "Password (obs-websocket)",
+    "testing": "Testing…",
+    "test": "Test connection",
+    "connected": "Connected ✓",
+    "help": "Enable it in <1>OBS → Tools → WebSocket Server Settings</1>. The password is stored in config.json in plain text."
+  },
+  "mobile": {
+    "keepAwakeOnTitle": "Screen kept on — tap to turn off",
+    "keepAwakeOffTitle": "Keep the screen always on",
+    "keepAwakeOn": "🔆 Screen on",
+    "keepAwakeOff": "🌙 Screen",
+    "home": "⌂ Home",
+    "homeTitle": "Back to the first grid",
+    "waiting": "Waiting for configuration…",
+    "navNotFound": "target grid not found",
+    "actionFailed": "failed to run",
+    "status": {
+      "connecting": "Connecting…",
+      "connected": "Connected",
+      "reconnecting": "Reconnecting…"
+    }
+  },
+  "errors": {
+    "action": {
+      "keypressNoKeys": "keypress with no keys",
+      "holdInvalid": "invalid hold duration: {{ms}} ms (use 0 to {{max}})",
+      "launchNoPath": "launch with no program path",
+      "urlEmpty": "empty url",
+      "sequenceTooDeep": "sequence nested too deep (max {{max}} levels)",
+      "sequenceNoSteps": "sequence with no steps",
+      "step": "step {{n}}: {{detail}}",
+      "obsNoTarget": "OBS {{op}} with no target (scene/source/hotkey)",
+      "obsNoOp": "OBS with no operation",
+      "obsUnknownOp": "unknown OBS operation: {{op}}",
+      "discordNoKeys": "discord with no keys (set up the global keybind in Discord and capture it)",
+      "navigateNoTarget": "navigate with no target page",
+      "unknownType": "unknown action type: {{type}}",
+      "navigateViaWS": "navigation is handled on the client, not over the WS",
+      "obsUnavailable": "OBS not available"
+    },
+    "input": {
+      "comboEmpty": "empty combo",
+      "unknownKey": "unknown key: {{key}}",
+      "sendFailed": "SendInput sent {{sent}} of {{total}} events: {{detail}}",
+      "notImplemented": "keyboard simulation not implemented on this OS (POC only supports Windows)",
+      "accessibilityDenied": "Accessibility permission denied — enable the app in System Settings → Privacy & Security → Accessibility"
+    },
+    "launch": {
+      "emptyPath": "launch: empty path",
+      "launchFailed": "launch {{path}}: {{detail}}",
+      "urlEmpty": "url: empty",
+      "urlOpenFailed": "opening url {{url}}: {{detail}}",
+      "notImplemented": "process launch not implemented on this OS (POC only supports Windows)",
+      "urlNotImplemented": "opening URL not implemented on this OS (POC only supports Windows)"
+    },
+    "obs": {
+      "disabled": "OBS integration disabled",
+      "connectFailed": "connecting to OBS at {{addr}}: {{detail}}"
+    },
+    "appicon": {
+      "unsupported": "app icon extraction not supported on this OS",
+      "iconUnavailable": "icon unavailable for {{path}}"
+    },
+    "server": {
+      "notStarted": "server not started",
+      "buttonNotFound": "button not found",
+      "noURL": "no URL available ({{detail}})",
+      "invalidToken": "invalid pairing token"
+    }
+  }
+}

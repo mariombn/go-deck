@@ -1,4 +1,5 @@
 import {useEffect, useState} from 'react';
+import {useTranslation} from 'react-i18next';
 import EmojiPicker, {EmojiStyle} from 'emoji-picker-react';
 import {isImageIcon, resizeImageToDataURL} from '../lib/appearance';
 import * as App from '../../wailsjs/go/main/App';
@@ -26,6 +27,7 @@ type IconMode = 'none' | 'emoji' | 'image' | 'app';
 
 // AppearanceFields edita a cor de fundo e o ícone (emoji ou imagem) do botão.
 export default function AppearanceFields({icon, color, onChange}: Props) {
+  const {t} = useTranslation();
   const [pickerOpen, setPickerOpen] = useState(false);
   const [imgErr, setImgErr] = useState('');
 
@@ -89,7 +91,7 @@ export default function AppearanceFields({icon, color, onChange}: Props) {
     <div className="space-y-4">
       {/* Cor de fundo */}
       <div>
-        <label className="mb-1 block text-sm text-slate-400">Cor de fundo</label>
+        <label className="mb-1 block text-sm text-slate-400">{t('appearance.bgColor')}</label>
         <div className="flex flex-wrap items-center gap-1.5">
           {PRESET_COLORS.map((c) => (
             <button
@@ -106,21 +108,21 @@ export default function AppearanceFields({icon, color, onChange}: Props) {
             value={color || '#475569'}
             onChange={(e) => onChange({color: e.target.value})}
             className="h-6 w-8 cursor-pointer rounded border border-slate-600 bg-transparent"
-            title="Cor personalizada"
+            title={t('appearance.customColor')}
           />
           <button
             type="button"
             onClick={() => onChange({color: ''})}
             className="rounded-md px-2 py-1 text-xs text-slate-300 hover:bg-slate-700"
           >
-            padrão
+            {t('common.default')}
           </button>
         </div>
       </div>
 
       {/* Ícone */}
       <div>
-        <label className="mb-1 block text-sm text-slate-400">Ícone</label>
+        <label className="mb-1 block text-sm text-slate-400">{t('appearance.icon')}</label>
         <div className="mb-2 flex gap-1">
           {(['none', 'emoji', 'image', 'app'] as IconMode[]).map((m) => (
             <button
@@ -131,7 +133,7 @@ export default function AppearanceFields({icon, color, onChange}: Props) {
                 tab === m ? 'bg-indigo-600' : 'bg-slate-700 hover:bg-slate-600'
               }`}
             >
-              {m === 'none' ? 'Nenhum' : m === 'emoji' ? 'Emoji' : m === 'image' ? 'Imagem' : 'App'}
+              {t(`appearance.modes.${m}`)}
             </button>
           ))}
         </div>
@@ -144,7 +146,7 @@ export default function AppearanceFields({icon, color, onChange}: Props) {
               className="flex items-center gap-2 rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm hover:border-indigo-500"
             >
               <span className="text-xl leading-none">{!isImageIcon(icon) && icon ? icon : '🙂'}</span>
-              Escolher emoji
+              {t('appearance.chooseEmoji')}
             </button>
             {pickerOpen && (
               // Overlay flutuante por cima do modal (evita empurrar a altura e
@@ -158,7 +160,7 @@ export default function AppearanceFields({icon, color, onChange}: Props) {
                     type="button"
                     onClick={() => setPickerOpen(false)}
                     className="absolute -right-3 -top-3 z-10 flex h-7 w-7 items-center justify-center rounded-full bg-slate-700 text-sm shadow-lg hover:bg-slate-600"
-                    title="Fechar"
+                    title={t('common.close')}
                   >
                     ✕
                   </button>
@@ -184,7 +186,7 @@ export default function AppearanceFields({icon, color, onChange}: Props) {
                 <img src={icon} alt="" className="h-10 w-10 rounded object-contain ring-1 ring-slate-700" />
               )}
               <label className="cursor-pointer rounded-lg bg-slate-700 px-3 py-1.5 text-sm hover:bg-slate-600">
-                {isImageIcon(icon) ? 'Trocar imagem' : 'Enviar imagem'}
+                {isImageIcon(icon) ? t('appearance.changeImage') : t('appearance.uploadImage')}
                 <input
                   type="file"
                   accept="image/*"
@@ -198,12 +200,12 @@ export default function AppearanceFields({icon, color, onChange}: Props) {
                   onClick={() => onChange({icon: ''})}
                   className="text-xs text-red-400 hover:underline"
                 >
-                  remover
+                  {t('common.remove')}
                 </button>
               )}
             </div>
             {imgErr && <p className="text-xs text-red-300">{imgErr}</p>}
-            <p className="text-xs text-slate-500">A imagem é redimensionada para 128px e embutida na config.</p>
+            <p className="text-xs text-slate-500">{t('appearance.imageHint')}</p>
           </div>
         )}
 
@@ -218,7 +220,7 @@ export default function AppearanceFields({icon, color, onChange}: Props) {
                 onClick={pickFromSystem}
                 className="rounded-lg bg-slate-700 px-3 py-1.5 text-sm hover:bg-slate-600"
               >
-                Escolher do sistema…
+                {t('appearance.chooseFromSystem')}
               </button>
               {isImageIcon(icon) && (
                 <button
@@ -226,7 +228,7 @@ export default function AppearanceFields({icon, color, onChange}: Props) {
                   onClick={() => onChange({icon: ''})}
                   className="text-xs text-red-400 hover:underline"
                 >
-                  remover
+                  {t('common.remove')}
                 </button>
               )}
             </div>
@@ -235,15 +237,15 @@ export default function AppearanceFields({icon, color, onChange}: Props) {
             <input
               value={appQuery}
               onChange={(e) => setAppQuery(e.target.value)}
-              placeholder="Filtrar aplicativos…"
+              placeholder={t('appearance.filterApps')}
               className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm outline-none focus:border-indigo-500"
             />
 
-            {appBusy && <p className="text-xs text-slate-400">Carregando aplicativos…</p>}
+            {appBusy && <p className="text-xs text-slate-400">{t('appearance.loadingApps')}</p>}
             {appErr && <p className="text-xs text-red-300">{appErr}</p>}
             {!appBusy && !appErr && apps !== null && filteredApps.length === 0 && (
               <p className="text-xs text-slate-500">
-                {apps.length === 0 ? 'Nenhum aplicativo encontrado.' : 'Nada corresponde ao filtro.'}
+                {apps.length === 0 ? t('appearance.noApps') : t('appearance.noMatch')}
               </p>
             )}
 
@@ -272,7 +274,7 @@ export default function AppearanceFields({icon, color, onChange}: Props) {
                 ))}
               </div>
             )}
-            <p className="text-xs text-slate-500">Ícone redimensionado para 128px e embutido na config.</p>
+            <p className="text-xs text-slate-500">{t('appearance.appIconHint')}</p>
           </div>
         )}
       </div>

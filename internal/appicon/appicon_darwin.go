@@ -48,12 +48,13 @@ import "C"
 
 import (
 	"encoding/base64"
-	"fmt"
 	"os"
 	"path/filepath"
 	"sort"
 	"strings"
 	"unsafe"
+
+	"go-deck/internal/i18n"
 )
 
 // darwinProvider extrai ícones via Cocoa (NSWorkspace) sob CGO — coerente com
@@ -70,7 +71,7 @@ func (darwinProvider) Extract(path string) (string, error) {
 	var n C.int
 	buf := C.iconPNG(cpath, 128, &n)
 	if buf == nil || n <= 0 {
-		return "", fmt.Errorf("ícone indisponível para %q", path)
+		return "", i18n.New("errors.appicon.iconUnavailable", map[string]any{"path": path})
 	}
 	defer C.free(unsafe.Pointer(buf))
 

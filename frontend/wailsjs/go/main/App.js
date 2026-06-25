@@ -30,6 +30,10 @@ export function SetActiveIP(arg1) {
   return window['go']['main']['App']['SetActiveIP'](arg1);
 }
 
+export function SetLanguage(arg1) {
+  return window['go']['main']['App']['SetLanguage'](arg1);
+}
+
 export function TestKeypress() {
   return window['go']['main']['App']['TestKeypress']();
 }

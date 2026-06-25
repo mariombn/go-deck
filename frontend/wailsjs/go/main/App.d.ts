@@ -18,6 +18,8 @@ export function SaveConfig(arg1:config.DeckConfig):Promise<config.DeckConfig>;
 
 export function SetActiveIP(arg1:string):Promise<server.NetworkInfo>;
 
+export function SetLanguage(arg1:string):Promise<config.DeckConfig>;
+
 export function TestKeypress():Promise<void>;
 
 export function TestOBS(arg1:config.OBSConfig):Promise<void>;

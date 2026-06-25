@@ -6,8 +6,7 @@
 package action
 
 import (
-	"fmt"
-
+	"go-deck/internal/i18n"
 	"go-deck/internal/input"
 	"go-deck/internal/launch"
 	"go-deck/internal/obs"
@@ -88,37 +87,37 @@ func (s Spec) build(depth int) (Action, error) {
 	switch s.Type {
 	case "keypress":
 		if len(s.Keys) == 0 {
-			return nil, fmt.Errorf("keypress sem teclas")
+			return nil, i18n.New("errors.action.keypressNoKeys", nil)
 		}
 		if s.HoldMs < 0 || s.HoldMs > maxHoldMs {
-			return nil, fmt.Errorf("duração de retenção inválida: %d ms (use de 0 a %d)", s.HoldMs, maxHoldMs)
+			return nil, i18n.New("errors.action.holdInvalid", map[string]any{"ms": s.HoldMs, "max": maxHoldMs})
 		}
 		return KeypressAction{Keys: s.Keys, HoldMs: s.HoldMs}, nil
 
 	case "launch":
 		if s.Path == "" {
-			return nil, fmt.Errorf("launch sem caminho do programa")
+			return nil, i18n.New("errors.action.launchNoPath", nil)
 		}
 		return LaunchAction{Path: s.Path, Args: s.Args}, nil
 
 	case "url":
 		if s.URL == "" {
-			return nil, fmt.Errorf("url vazia")
+			return nil, i18n.New("errors.action.urlEmpty", nil)
 		}
 		return URLAction{URL: s.URL}, nil
 
 	case "sequence":
 		if depth >= maxSequenceDepth {
-			return nil, fmt.Errorf("sequence aninhado demais (máximo %d níveis)", maxSequenceDepth)
+			return nil, i18n.New("errors.action.sequenceTooDeep", map[string]any{"max": maxSequenceDepth})
 		}
 		if len(s.Steps) == 0 {
-			return nil, fmt.Errorf("sequence sem passos")
+			return nil, i18n.New("errors.action.sequenceNoSteps", nil)
 		}
 		steps := make([]Action, 0, len(s.Steps))
 		for i, step := range s.Steps {
 			a, err := step.build(depth + 1)
 			if err != nil {
-				return nil, fmt.Errorf("passo %d: %w", i+1, err)
+				return nil, i18n.Wrap("errors.action.step", map[string]any{"n": i + 1}, err)
 			}
 			steps = append(steps, a)
 		}
@@ -128,14 +127,14 @@ func (s Spec) build(depth int) (Action, error) {
 		switch s.ObsOp {
 		case ObsOpScene, ObsOpToggleMute, ObsOpHotkey:
 			if s.Target == "" {
-				return nil, fmt.Errorf("OBS %q sem alvo (cena/fonte/hotkey)", s.ObsOp)
+				return nil, i18n.New("errors.action.obsNoTarget", map[string]any{"op": s.ObsOp})
 			}
 		case ObsOpToggleRecord, ObsOpToggleStream:
 			// não precisam de alvo
 		case "":
-			return nil, fmt.Errorf("OBS sem operação")
+			return nil, i18n.New("errors.action.obsNoOp", nil)
 		default:
-			return nil, fmt.Errorf("operação OBS desconhecida: %q", s.ObsOp)
+			return nil, i18n.New("errors.action.obsUnknownOp", map[string]any{"op": s.ObsOp})
 		}
 		return OBSAction{Op: s.ObsOp, Target: s.Target}, nil
 
@@ -143,7 +142,7 @@ func (s Spec) build(depth int) (Action, error) {
 		// Por baixo é um keypress: dispara o keybind global configurado no
 		// Discord. O discordOp é só rótulo/UI; o que executa são as teclas.
 		if len(s.Keys) == 0 {
-			return nil, fmt.Errorf("discord sem teclas (configure o keybind global no Discord e capture-o)")
+			return nil, i18n.New("errors.action.discordNoKeys", nil)
 		}
 		return KeypressAction{Keys: s.Keys}, nil
 
@@ -152,12 +151,12 @@ func (s Spec) build(depth int) (Action, error) {
 		// não envia press). Esta Action existe só para o config round-tripar
 		// e para reportar erro caso seja acionada via WS por engano.
 		if s.TargetPage == "" {
-			return nil, fmt.Errorf("navigate sem página de destino")
+			return nil, i18n.New("errors.action.navigateNoTarget", nil)
 		}
 		return NavigateAction{TargetPage: s.TargetPage}, nil
 
 	default:
-		return nil, fmt.Errorf("tipo de ação desconhecido: %q", s.Type)
+		return nil, i18n.New("errors.action.unknownType", map[string]any{"type": s.Type})
 	}
 }
 
@@ -201,7 +200,7 @@ type SequenceAction struct {
 func (seq SequenceAction) Execute(ctx ExecContext) error {
 	for i, a := range seq.Steps {
 		if err := a.Execute(ctx); err != nil {
-			return fmt.Errorf("passo %d: %w", i+1, err)
+			return i18n.Wrap("errors.action.step", map[string]any{"n": i + 1}, err)
 		}
 	}
 	return nil
@@ -221,12 +220,12 @@ type NavigateAction struct {
 }
 
 func (n NavigateAction) Execute(ExecContext) error {
-	return fmt.Errorf("navegação é tratada no cliente, não via WS")
+	return i18n.New("errors.action.navigateViaWS", nil)
 }
 
 func (o OBSAction) Execute(ctx ExecContext) error {
 	if ctx.OBS == nil {
-		return fmt.Errorf("OBS não disponível")
+		return i18n.New("errors.action.obsUnavailable", nil)
 	}
 	switch o.Op {
 	case ObsOpScene:
@@ -240,6 +239,6 @@ func (o OBSAction) Execute(ctx ExecContext) error {
 	case ObsOpHotkey:
 		return ctx.OBS.TriggerHotkey(o.Target)
 	default:
-		return fmt.Errorf("operação OBS desconhecida: %q", o.Op)
+		return i18n.New("errors.action.obsUnknownOp", map[string]any{"op": o.Op})
 	}
 }

@@ -246,6 +246,7 @@ export namespace config {
 	    pages: Page[];
 	    server: Server;
 	    integrations: Integrations;
+	    language?: string;
 	    grid?: Grid;
 	    buttons?: Button[];
 	
@@ -258,6 +259,7 @@ export namespace config {
 	        this.pages = this.convertValues(source["pages"], Page);
 	        this.server = this.convertValues(source["server"], Server);
 	        this.integrations = this.convertValues(source["integrations"], Integrations);
+	        this.language = source["language"];
 	        this.grid = this.convertValues(source["grid"], Grid);
 	        this.buttons = this.convertValues(source["buttons"], Button);
 	    }

@@ -88,6 +88,12 @@ type DeckConfig struct {
 	Pages        []Page       `json:"pages"`
 	Server       Server       `json:"server"`
 	Integrations Integrations `json:"integrations"`
+	// Language é o idioma global do app (ex.: "en", "pt-BR"). Fonte da verdade
+	// única, lida por desktop, celular e backend Go (decisões P2-B/P3-A). Vazio
+	// = ainda não escolhido (1ª vez): o cliente detecta pelo locale do SO e
+	// persiste via App.SetLanguage. Diferente do Token, NÃO é removido no
+	// clone() — o frontend/celular precisam dele.
+	Language string `json:"language,omitempty"`
 
 	// Campos legados do formato antigo (grid único). Mantidos apenas para
 	// migrar config.json pré-páginas; em normalize viram a primeira Page e
@@ -208,6 +214,27 @@ func (s *Store) Replace(cfg DeckConfig) (DeckConfig, error) {
 	return s.clone(), nil
 }
 
+// Language devolve o idioma global persistido (vazio = ainda não escolhido).
+// Usado pela borda (server/bindings) para traduzir as mensagens de erro.
+func (s *Store) Language() string {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.cfg.Language
+}
+
+// SetLanguage grava o idioma global, persiste na hora (decisão P8) e devolve a
+// config normalizada (sem token). O broadcast aos celulares é feito por quem
+// chama (a App, que tem o servidor).
+func (s *Store) SetLanguage(lang string) (DeckConfig, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.cfg.Language = lang
+	if err := s.save(); err != nil {
+		return DeckConfig{}, err
+	}
+	return s.clone(), nil
+}
+
 // FindButton procura um botão pelo id em todas as páginas (os ids são únicos
 // no deck inteiro).
 func (s *Store) FindButton(id string) (Button, bool) {
@@ -250,8 +277,8 @@ func (s *Store) normalize() {
 		s.cfg.Pages = Default().Pages
 	}
 
-	pageIDs := map[string]bool{}  // unicidade de ids de página
-	btnIDs := map[string]bool{}   // unicidade de ids de botão (deck inteiro)
+	pageIDs := map[string]bool{} // unicidade de ids de página
+	btnIDs := map[string]bool{}  // unicidade de ids de botão (deck inteiro)
 	for pi := range s.cfg.Pages {
 		p := &s.cfg.Pages[pi]
 		if p.ID == "" || pageIDs[p.ID] {

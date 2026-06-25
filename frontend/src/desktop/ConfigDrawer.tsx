@@ -1,6 +1,8 @@
 import {useEffect, useState} from 'react';
+import {useTranslation} from 'react-i18next';
 import {OBSConfig} from '../types';
 import OBSPanel from './OBSPanel';
+import {LANGUAGES} from '../lib/i18n';
 
 interface NetworkInfo {
   ips: string[];
@@ -18,6 +20,8 @@ interface Props {
   onChangeIP: (ip: string) => void;
   obs: OBSConfig;
   onChangeOBS: (obs: OBSConfig) => void;
+  language: string;
+  onChangeLanguage: (lang: string) => void;
 }
 
 type Tab = 'mobile' | 'obs';
@@ -27,7 +31,18 @@ type Tab = 'mobile' | 'obs';
 // integração com o OBS, agora em abas. Fica sempre montado para animar a
 // entrada/saída (translate-x + fade do backdrop); o estado de salvar continua
 // sendo o global do header (mexer no OBS só marca a config como suja).
-export default function ConfigDrawer({open, onClose, network, qr, onChangeIP, obs, onChangeOBS}: Props) {
+export default function ConfigDrawer({
+  open,
+  onClose,
+  network,
+  qr,
+  onChangeIP,
+  obs,
+  onChangeOBS,
+  language,
+  onChangeLanguage,
+}: Props) {
+  const {t, i18n} = useTranslation();
   const [tab, setTab] = useState<Tab>('mobile');
 
   // Esc fecha o drawer (só quando aberto).
@@ -57,24 +72,39 @@ export default function ConfigDrawer({open, onClose, network, qr, onChangeIP, ob
         }`}
       >
         <header className="flex items-center justify-between border-b border-slate-800 px-5 py-3">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-300">Configurações</h2>
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-300">{t('config.title')}</h2>
           <button
             onClick={onClose}
-            aria-label="Fechar"
+            aria-label={t('common.close')}
             className="rounded-lg px-2 py-1 text-slate-400 hover:bg-slate-800 hover:text-slate-200"
           >
             ✕
           </button>
         </header>
 
+        {/* Idioma global do app (decisão P3-A): aplica a desktop, celular e
+            erros do backend. Trocar salva na hora (decisão P8). */}
+        <div className="flex shrink-0 items-center gap-2 border-b border-slate-800 px-5 py-3">
+          <label htmlFor="lang-select" className="text-sm text-slate-400">
+            {t('config.language')}
+          </label>
+          <select
+            id="lang-select"
+            value={language || i18n.language}
+            onChange={(e) => onChangeLanguage(e.target.value)}
+            className="ml-auto rounded border border-slate-700 bg-slate-800 px-2 py-1 text-sm"
+          >
+            {LANGUAGES.map((l) => (
+              <option key={l.code} value={l.code}>
+                {l.nativeName}
+              </option>
+            ))}
+          </select>
+        </div>
+
         {/* Abas */}
         <div className="flex shrink-0 border-b border-slate-800 px-5 pt-3">
-          {(
-            [
-              ['mobile', 'Celular/QR'],
-              ['obs', 'OBS'],
-            ] as const
-          ).map(([id, label]) => (
+          {(['mobile', 'obs'] as const).map((id) => (
             <button
               key={id}
               onClick={() => setTab(id)}
@@ -84,7 +114,7 @@ export default function ConfigDrawer({open, onClose, network, qr, onChangeIP, ob
                   : 'border-transparent text-slate-400 hover:text-slate-200'
               }`}
             >
-              {label}
+              {t(`config.tabs.${id}`)}
             </button>
           ))}
         </div>
@@ -110,9 +140,10 @@ function MobileTab({
   qr: string;
   onChangeIP: (ip: string) => void;
 }) {
+  const {t} = useTranslation();
   return (
     <>
-      <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-400">Acesso pelo celular</h3>
+      <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-400">{t('config.mobileAccess')}</h3>
 
       {network?.error ? (
         <div className="mb-3 rounded-lg bg-red-500/10 p-3 text-sm text-red-300">{network.error}</div>
@@ -125,7 +156,7 @@ function MobileTab({
 
           {network && (network.ips?.length ?? 0) > 1 && (
             <label className="mb-3 block text-xs text-slate-400">
-              IP da rede (troque se o QR não conectar)
+              {t('config.ipLabel')}
               <select
                 value={network.activeIP}
                 onChange={(e) => onChangeIP(e.target.value)}
@@ -143,9 +174,7 @@ function MobileTab({
       )}
 
       <div className="mt-4 rounded-lg bg-amber-500/10 p-3 text-xs text-amber-300">
-        🔒 Acesso protegido por token: só dispositivos que escanearem este QR conseguem acionar os botões. Não
-        compartilhe o QR/link. Sem HTTPS — o token trafega na LAN em texto puro, então use apenas em redes
-        confiáveis.
+        {t('config.securityNotice')}
       </div>
     </>
   );

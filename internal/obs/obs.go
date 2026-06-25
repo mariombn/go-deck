@@ -15,6 +15,8 @@ import (
 	"github.com/andreykaipov/goobs/api/requests/inputs"
 	"github.com/andreykaipov/goobs/api/requests/scenes"
 	"github.com/gorilla/websocket"
+
+	"go-deck/internal/i18n"
 )
 
 // Settings são os dados de conexão do obs-websocket, vindos do config.json
@@ -55,7 +57,7 @@ const (
 // connect abre uma conexão obs-websocket usando as settings atuais.
 func (c *client) connect() (*goobs.Client, error) {
 	if !c.settings.Enabled {
-		return nil, fmt.Errorf("integração com OBS desabilitada")
+		return nil, i18n.New("errors.obs.disabled", nil)
 	}
 	host := c.settings.Host
 	if host == "" {
@@ -73,7 +75,7 @@ func (c *client) connect() (*goobs.Client, error) {
 		goobs.WithResponseTimeout(responseTimeout),
 	)
 	if err != nil {
-		return nil, fmt.Errorf("conectando ao OBS em %s: %w", addr, err)
+		return nil, i18n.Wrap("errors.obs.connectFailed", map[string]any{"addr": addr}, err)
 	}
 	return cl, nil
 }

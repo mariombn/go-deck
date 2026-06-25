@@ -1,8 +1,9 @@
 package launch
 
 import (
-	"fmt"
 	"os/exec"
+
+	"go-deck/internal/i18n"
 )
 
 // windowsLauncher usa os/exec nativo (Go puro, sem CGO) — coerente com a
@@ -16,11 +17,11 @@ func newLauncher() Launcher { return windowsLauncher{} }
 // e portanto não há injeção de shell.
 func (windowsLauncher) Launch(path string, args []string) error {
 	if path == "" {
-		return fmt.Errorf("launch: caminho vazio")
+		return i18n.New("errors.launch.emptyPath", nil)
 	}
 	cmd := exec.Command(path, args...)
 	if err := cmd.Start(); err != nil {
-		return fmt.Errorf("launch %q: %w", path, err)
+		return i18n.Wrap("errors.launch.launchFailed", map[string]any{"path": path}, err)
 	}
 	// Não esperamos o término (fire-and-forget); liberamos os recursos do
 	// processo numa goroutine para não deixar zumbis.
@@ -32,11 +33,11 @@ func (windowsLauncher) Launch(path string, args []string) error {
 // "cmd /c start" (que exigiria shell e abriria espaço para injeção).
 func (windowsLauncher) OpenURL(url string) error {
 	if url == "" {
-		return fmt.Errorf("url: vazia")
+		return i18n.New("errors.launch.urlEmpty", nil)
 	}
 	cmd := exec.Command("rundll32", "url.dll,FileProtocolHandler", url)
 	if err := cmd.Start(); err != nil {
-		return fmt.Errorf("abrindo url %q: %w", url, err)
+		return i18n.Wrap("errors.launch.urlOpenFailed", map[string]any{"url": url}, err)
 	}
 	go func() { _ = cmd.Wait() }()
 	return nil

@@ -18,6 +18,8 @@ import (
 	"syscall"
 	"unsafe"
 
+	"go-deck/internal/i18n"
+
 	"golang.org/x/sys/windows"
 )
 
@@ -177,7 +179,7 @@ func extractIconLocked(path string) (string, error) {
 		// Sem jumbo (ou COM indisponível) caímos no ícone padrão de 32px.
 		hicon, err = largeIcon(path)
 		if err != nil || hicon == 0 {
-			return "", fmt.Errorf("ícone indisponível para %q: %v", path, err)
+			return "", i18n.New("errors.appicon.iconUnavailable", map[string]any{"path": path})
 		}
 	}
 	defer procDestroyIcon.Call(hicon)
