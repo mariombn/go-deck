@@ -82,7 +82,7 @@ func TestLoad(t *testing.T) {
 
 	t.Run("pula arquivos não-.json", func(t *testing.T) {
 		fsys := fstest.MapFS{
-			"en.json":    {Data: []byte(`{"a":"A"}`)},
+			"en.json":     {Data: []byte(`{"a":"A"}`)},
 			"leia-me.txt": {Data: []byte("não é json")},
 			"notas.md":    {Data: []byte("# título")},
 		}
