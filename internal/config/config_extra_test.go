@@ -16,13 +16,20 @@ import (
 func withTempConfigDir(t *testing.T) string {
 	t.Helper()
 	dir := t.TempDir()
-	// os.UserConfigDir consulta, em ordem por SO: APPDATA (Windows),
-	// XDG_CONFIG_HOME e HOME (Unix). Setamos todos para o tempdir para não
-	// depender do SO do runner.
+	// os.UserConfigDir resolve a base de formas diferentes por SO: APPDATA no
+	// Windows, XDG_CONFIG_HOME (ou ~/.config) no Linux e ~/Library/Application
+	// Support no macOS (que IGNORA XDG_CONFIG_HOME). Setamos todas as variáveis
+	// para o tempdir e, em vez de fixar o caminho, derivamos a base do mesmo
+	// os.UserConfigDir que a produção usa — assim o caminho esperado bate em
+	// qualquer runner (Linux, macOS, Windows).
 	t.Setenv("APPDATA", dir)
 	t.Setenv("XDG_CONFIG_HOME", dir)
 	t.Setenv("HOME", dir)
-	return filepath.Join(dir, "DeckPilot", "config.json")
+	base, err := os.UserConfigDir()
+	if err != nil {
+		t.Fatalf("os.UserConfigDir: %v", err)
+	}
+	return filepath.Join(base, "DeckPilot", "config.json")
 }
 
 // TestMigrateLegacyZeraCampos: além de virar página, os campos legados somem do
