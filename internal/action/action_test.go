@@ -1,10 +1,24 @@
 package action
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 	"testing"
+
+	"go-deck/internal/i18n"
 )
+
+// errKey extrai a chave i18n de um erro do backend. As camadas internas
+// devolvem *i18n.Error nomeando a chave (a tradução só ocorre na borda), então
+// os testes asseveram a CHAVE, não a frase traduzida.
+func errKey(err error) string {
+	var e *i18n.Error
+	if errors.As(err, &e) {
+		return e.Key
+	}
+	return ""
+}
 
 // nestSequences monta uma Spec com `depth` sequences aninhados, terminando
 // num keypress válido. depth=1 => sequence[keypress].
@@ -50,21 +64,21 @@ func TestBuildValidationErrors(t *testing.T) {
 	cases := []struct {
 		name    string
 		spec    Spec
-		wantSub string // trecho esperado na mensagem de erro
+		wantKey string // chave i18n esperada no *Error
 	}{
-		{"keypress sem teclas", Spec{Type: "keypress"}, "sem teclas"},
-		{"keypress hold negativo", Spec{Type: "keypress", Keys: []string{"w"}, HoldMs: -1}, "retenção inválida"},
-		{"keypress hold acima do teto", Spec{Type: "keypress", Keys: []string{"w"}, HoldMs: maxHoldMs + 1}, "retenção inválida"},
-		{"launch sem path", Spec{Type: "launch"}, "sem caminho"},
-		{"url vazia", Spec{Type: "url"}, "url vazia"},
-		{"sequence sem passos", Spec{Type: "sequence"}, "sem passos"},
-		{"obs sem operação", Spec{Type: "obs"}, "sem operação"},
-		{"obs op inválida", Spec{Type: "obs", ObsOp: "explodir"}, "desconhecida"},
-		{"obs scene sem alvo", Spec{Type: "obs", ObsOp: ObsOpScene}, "sem alvo"},
-		{"obs mute sem alvo", Spec{Type: "obs", ObsOp: ObsOpToggleMute}, "sem alvo"},
-		{"discord sem teclas", Spec{Type: "discord", DiscordOp: "mute"}, "sem teclas"},
-		{"navigate sem destino", Spec{Type: "navigate"}, "sem página de destino"},
-		{"tipo desconhecido", Spec{Type: "frobnicate"}, "desconhecido"},
+		{"keypress sem teclas", Spec{Type: "keypress"}, "errors.action.keypressNoKeys"},
+		{"keypress hold negativo", Spec{Type: "keypress", Keys: []string{"w"}, HoldMs: -1}, "errors.action.holdInvalid"},
+		{"keypress hold acima do teto", Spec{Type: "keypress", Keys: []string{"w"}, HoldMs: maxHoldMs + 1}, "errors.action.holdInvalid"},
+		{"launch sem path", Spec{Type: "launch"}, "errors.action.launchNoPath"},
+		{"url vazia", Spec{Type: "url"}, "errors.action.urlEmpty"},
+		{"sequence sem passos", Spec{Type: "sequence"}, "errors.action.sequenceNoSteps"},
+		{"obs sem operação", Spec{Type: "obs"}, "errors.action.obsNoOp"},
+		{"obs op inválida", Spec{Type: "obs", ObsOp: "explodir"}, "errors.action.obsUnknownOp"},
+		{"obs scene sem alvo", Spec{Type: "obs", ObsOp: ObsOpScene}, "errors.action.obsNoTarget"},
+		{"obs mute sem alvo", Spec{Type: "obs", ObsOp: ObsOpToggleMute}, "errors.action.obsNoTarget"},
+		{"discord sem teclas", Spec{Type: "discord", DiscordOp: "mute"}, "errors.action.discordNoKeys"},
+		{"navigate sem destino", Spec{Type: "navigate"}, "errors.action.navigateNoTarget"},
+		{"tipo desconhecido", Spec{Type: "frobnicate"}, "errors.action.unknownType"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -72,8 +86,8 @@ func TestBuildValidationErrors(t *testing.T) {
 			if err == nil {
 				t.Fatalf("Build() deveria ter falhado")
 			}
-			if !strings.Contains(err.Error(), tc.wantSub) {
-				t.Fatalf("erro = %q, esperava conter %q", err.Error(), tc.wantSub)
+			if got := errKey(err); got != tc.wantKey {
+				t.Fatalf("chave = %q, quero %q (erro: %v)", got, tc.wantKey, err)
 			}
 		})
 	}
@@ -89,8 +103,17 @@ func TestBuildSequenceErrorPropagates(t *testing.T) {
 	if err == nil {
 		t.Fatal("Build() deveria falhar por passo inválido")
 	}
-	if !strings.Contains(err.Error(), "passo 2") {
-		t.Fatalf("erro = %q, esperava identificar 'passo 2'", err.Error())
+	// O erro embrulha o passo falho: chave errors.action.step com a var n=2,
+	// e dentro dela a causa raiz (launchNoPath).
+	var e *i18n.Error
+	if !errors.As(err, &e) || e.Key != "errors.action.step" {
+		t.Fatalf("esperava *Error com chave errors.action.step, veio %v", err)
+	}
+	if fmt.Sprint(e.Vars["n"]) != "2" {
+		t.Fatalf("esperava identificar o passo 2, veio n=%v", e.Vars["n"])
+	}
+	if errKey(e.Wrapped) != "errors.action.launchNoPath" {
+		t.Fatalf("causa raiz = %q, esperava errors.action.launchNoPath", errKey(e.Wrapped))
 	}
 }
 
@@ -109,8 +132,9 @@ func TestBuildNestingExceedsLimit(t *testing.T) {
 	if err == nil {
 		t.Fatal("aninhamento além do limite deveria falhar")
 	}
-	if !strings.Contains(err.Error(), "aninhado demais") {
-		t.Fatalf("erro = %q, esperava conter 'aninhado demais'", err.Error())
+	// A causa raiz (no fundo da cadeia de errors.action.step) é sequenceTooDeep.
+	if !strings.Contains(err.Error(), "errors.action.sequenceTooDeep") {
+		t.Fatalf("erro = %q, esperava conter 'errors.action.sequenceTooDeep'", err.Error())
 	}
 }
 
