@@ -65,6 +65,12 @@ jobs:
         if: github.event_name == 'release'
         uses: softprops/action-gh-release@v2
         with:
+          # Em eventos `release`, github.ref NEM SEMPRE é a tag (pode resolver para a
+          # branch alvo, ex.: refs/heads/main). A action só descobre a tag via `tag_name`
+          # ou via github.ref (refs/tags/...); ela NÃO lê github.event.release.tag_name
+          # sozinha. Sem isso, falha com "⚠️ GitHub Releases requires a tag".
+          # Passamos a tag explicitamente do payload do evento.
+          tag_name: ${{ github.event.release.tag_name }}
           files: ${{ matrix.asset }}
 
       # Quando o disparo é manual (workflow_dispatch): guarda como artifact do run.
