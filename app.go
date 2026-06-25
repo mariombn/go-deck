@@ -5,12 +5,16 @@ import (
 	"embed"
 	"fmt"
 	"log"
+	"runtime"
 	"time"
 
+	"go-deck/internal/appicon"
 	"go-deck/internal/config"
 	"go-deck/internal/input"
 	"go-deck/internal/launch"
 	"go-deck/internal/server"
+
+	wailsruntime "github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
 // App é a struct exposta ao frontend desktop via bindings do Wails.
@@ -19,6 +23,7 @@ type App struct {
 	assets   embed.FS
 	input    input.InputController
 	launcher launch.Launcher
+	appicons appicon.Provider
 	store    *config.Store
 	server   *server.Server
 }
@@ -29,6 +34,7 @@ func NewApp(assets embed.FS) *App {
 		assets:   assets,
 		input:    input.New(),
 		launcher: launch.New(),
+		appicons: appicon.New(),
 	}
 }
 
@@ -102,6 +108,38 @@ func (a *App) GetQRCode() (string, error) {
 		return "", fmt.Errorf("servidor não iniciado")
 	}
 	return a.server.QRCode()
+}
+
+// ListInstalledApps enumera os apps instalados no SO com seus ícones (data
+// URL PNG), para o usuário escolher um como ícone de botão. Pode demorar
+// alguns segundos (extrai o ícone de cada app) — o frontend chama de forma
+// assíncrona com indicador de carregamento.
+func (a *App) ListInstalledApps() ([]appicon.AppEntry, error) {
+	return a.appicons.List()
+}
+
+// PickAppIcon abre o seletor de arquivos nativo (filtrado por executável/.app
+// conforme o SO) e devolve o ícone do app escolhido como data URL PNG. Devolve
+// string vazia se o usuário cancelar.
+func (a *App) PickAppIcon() (string, error) {
+	var filters []wailsruntime.FileFilter
+	switch runtime.GOOS {
+	case "windows":
+		filters = []wailsruntime.FileFilter{{DisplayName: "Aplicativos (*.exe, *.lnk)", Pattern: "*.exe;*.lnk"}}
+	case "darwin":
+		filters = []wailsruntime.FileFilter{{DisplayName: "Aplicativos (*.app)", Pattern: "*.app"}}
+	}
+	path, err := wailsruntime.OpenFileDialog(a.ctx, wailsruntime.OpenDialogOptions{
+		Title:   "Escolher aplicativo",
+		Filters: filters,
+	})
+	if err != nil {
+		return "", err
+	}
+	if path == "" {
+		return "", nil // cancelado
+	}
+	return a.appicons.Extract(path)
 }
 
 // TestKeypress é o teste de input do vertical slice (digita "hi" após 3s).

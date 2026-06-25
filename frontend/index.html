@@ -2,8 +2,25 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8"/>
-    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <!-- viewport-fit=cover: usa a tela toda atrás de notch/barras quando em standalone -->
+    <meta content="width=device-width, initial-scale=1.0, viewport-fit=cover" name="viewport"/>
     <title>go-deck</title>
+
+    <!-- PWA-light (sem service worker: o celular acessa por HTTP na LAN, e SW
+         exige contexto seguro). Estas tags fazem o app abrir SEM a barra do
+         navegador quando adicionado à tela de início:
+         - iOS (Safari/Chrome): apple-mobile-web-app-capable dispara o modo
+           standalone, e funciona em HTTP puro.
+         - Android/desktop: o manifest com display:standalone faz o atalho
+           abrir sem barra.
+         Ressalva: o atalho congela a URL atual (IP da LAN + token ?t=); se o
+         IP mudar ou o token rotacionar, é só re-adicionar. -->
+    <meta name="apple-mobile-web-app-capable" content="yes"/>
+    <meta name="mobile-web-app-capable" content="yes"/>
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+    <meta name="apple-mobile-web-app-title" content="go-deck"/>
+    <meta name="theme-color" content="#0f172a"/>
+    <link rel="manifest" href="./manifest.webmanifest"/>
 </head>
 <body>
 <div id="root"></div>

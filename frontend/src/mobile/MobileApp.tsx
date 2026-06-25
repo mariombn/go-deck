@@ -62,6 +62,45 @@ function useOrientation(): boolean {
   return portrait;
 }
 
+// useFitGridWidth mede a área disponível (ref) e devolve a largura em px que o
+// grid deve ter para caber INTEIRO — em largura e altura — sem scroll. Como os
+// botões são aspect-square, basta fixar a largura: cada coluna vira `cell` e a
+// altura segue sozinha. cell = min(couber-na-largura, couber-na-altura), então
+// em paisagem é a altura que manda (era o que faltava: o grid só olhava a
+// largura). Sem piso: sempre cabe, por menor que fique (decisão do usuário).
+function useFitGridWidth(
+  ref: {current: HTMLElement | null},
+  rows: number,
+  cols: number,
+  gap = 12, // px — equivalente ao gap-3 do DeckGrid
+): number | undefined {
+  const [width, setWidth] = useState<number | undefined>(undefined);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const measure = () => {
+      const W = el.clientWidth;
+      const H = el.clientHeight;
+      if (W <= 0 || H <= 0 || rows <= 0 || cols <= 0) return;
+      const cellW = (W - (cols - 1) * gap) / cols;
+      const cellH = (H - (rows - 1) * gap) / rows;
+      const cell = Math.max(0, Math.floor(Math.min(cellW, cellH)));
+      setWidth(cell * cols + (cols - 1) * gap);
+    };
+    measure();
+    // ResizeObserver cobre rotação e mudança de viewport (o elemento
+    // redimensiona junto); orientationchange é reforço em alguns navegadores.
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    window.addEventListener('orientationchange', measure);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener('orientationchange', measure);
+    };
+  }, [ref, rows, cols, gap]);
+  return width;
+}
+
 export default function MobileApp() {
   const [config, setConfig] = useState<DeckConfig | null>(null);
   const [currentPageId, setCurrentPageId] = useState<string>('');
@@ -77,6 +116,7 @@ export default function MobileApp() {
   const wsRef = useRef<WebSocket | null>(null);
   const retryRef = useRef(0);
   const timerRef = useRef<number | null>(null);
+  const areaRef = useRef<HTMLDivElement | null>(null);
   const portrait = useOrientation();
   const keepAwake = useKeepAwake();
 
@@ -150,6 +190,12 @@ export default function MobileApp() {
   // numa atualização de config vinda do desktop).
   const currentPage = pages.find((p) => p.id === currentPageId) ?? pages[0];
 
+  // Dimensões exibidas já considerando a transposição em retrato (decisão 10),
+  // para o auto-ajuste calcular o tamanho certo em cada orientação.
+  const displayRows = currentPage ? (portrait ? currentPage.grid.cols : currentPage.grid.rows) : 0;
+  const displayCols = currentPage ? (portrait ? currentPage.grid.rows : currentPage.grid.cols) : 0;
+  const gridWidth = useFitGridWidth(areaRef, displayRows, displayCols);
+
   // Toque numa célula: navigate troca de página localmente (sem press); as
   // demais ações vão ao PC pelo WS.
   const onCell = (_r: number, _c: number, button: ButtonConfig | null) => {
@@ -165,8 +211,11 @@ export default function MobileApp() {
   };
 
   return (
-    <div className="flex min-h-full flex-col bg-slate-900 text-slate-100">
-      <div className="flex items-center justify-between px-2">
+    // h-[100dvh] + overflow-hidden: ocupa exatamente a área VISÍVEL (descontando
+    // a barra do navegador no celular) e nunca rola. É o que, junto do
+    // auto-ajuste, faz o grid inteiro caber sem scroll.
+    <div className="flex h-[100dvh] flex-col overflow-hidden bg-slate-900 text-slate-100">
+      <div className="flex shrink-0 items-center justify-between px-2">
         <StatusBar status={status} />
         <div className="flex items-center gap-2 px-2">
           <button
@@ -200,20 +249,24 @@ export default function MobileApp() {
           )}
         </div>
       </div>
-      <main className="flex flex-1 items-center justify-center p-4">
-        {currentPage ? (
-          <div className="w-full max-w-2xl">
-            <DeckGrid
-              page={currentPage}
-              mode="mobile"
-              transpose={portrait}
-              flash={flash}
-              onCellClick={onCell}
-            />
-          </div>
-        ) : (
-          <p className="text-slate-400">Aguardando configuração…</p>
-        )}
+      <main className="flex min-h-0 flex-1 items-center justify-center p-3">
+        {/* areaRef mede o espaço livre; o grid recebe a largura calculada para
+            caber em largura E altura. min-h-0 deixa o flex encolher de fato. */}
+        <div ref={areaRef} className="flex h-full w-full items-center justify-center">
+          {currentPage ? (
+            <div style={{width: gridWidth}}>
+              <DeckGrid
+                page={currentPage}
+                mode="mobile"
+                transpose={portrait}
+                flash={flash}
+                onCellClick={onCell}
+              />
+            </div>
+          ) : (
+            <p className="text-slate-400">Aguardando configuração…</p>
+          )}
+        </div>
       </main>
       {toast && (
         <div className="fixed bottom-4 left-1/2 -translate-x-1/2 rounded-lg bg-red-600 px-4 py-2 text-sm shadow-lg">

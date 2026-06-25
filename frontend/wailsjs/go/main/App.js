@@ -14,6 +14,14 @@ export function GetQRCode() {
   return window['go']['main']['App']['GetQRCode']();
 }
 
+export function ListInstalledApps() {
+  return window['go']['main']['App']['ListInstalledApps']();
+}
+
+export function PickAppIcon() {
+  return window['go']['main']['App']['PickAppIcon']();
+}
+
 export function SaveConfig(arg1) {
   return window['go']['main']['App']['SaveConfig'](arg1);
 }
