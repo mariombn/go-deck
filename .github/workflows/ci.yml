@@ -1,0 +1,127 @@
+# Esteira de qualidade: roda em todo push e pull request. É o gate que faltava
+# — o release.yml só gera binários quando há um Release publicado, sem validar
+# nada antes do merge. Aqui validamos formatação, vet, testes (Go e frontend),
+# build do frontend e a paridade dos locales.
+#
+# Estrutura em 3 jobs:
+#   - frontend  (ubuntu): locales + tsc + vitest + vite build (tudo OS-agnóstico).
+#   - go        (matrix windows+macos): compila/testa os arquivos por-SO de
+#                verdade (SendInput em Go puro no Windows; CGEvent via CGO no
+#                macOS). Builda o frontend antes porque main.go faz
+#                //go:embed all:frontend/dist — sem dist, o pacote raiz não
+#                compila.
+#   - go-quality (ubuntu): gofmt + go test -race nos pacotes internos. Os stubs
+#                _other.go compilam no Linux, então o detector de corrida (mais
+#                confiável no Linux) cobre a lógica OS-agnóstica de graça.
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  frontend:
+    name: frontend (lint + test + build)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Instalar dependências
+        run: npm ci
+
+      - name: Paridade dos locales (en base x demais idiomas)
+        run: npm run check:locales
+
+      - name: Type-check (tsc)
+        run: npx tsc --noEmit
+
+      - name: Testes (Vitest) + cobertura
+        run: npm run test:coverage
+
+      - name: Build de produção (vite)
+        run: npm run build
+
+  go:
+    name: go (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.23"
+          cache-dependency-path: go.sum
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      # main.go embute frontend/dist via //go:embed — sem dist o pacote raiz
+      # não compila. Buildar o frontend aqui satisfaz o embed para go vet/build/test.
+      - name: Build do frontend (para o //go:embed)
+        working-directory: frontend
+        run: |
+          npm ci
+          npm run build
+
+      - name: go vet
+        run: go vet ./...
+
+      - name: Build de produção (embed)
+        run: go build ./...
+
+      - name: Build da variante dev (reverse-proxy)
+        run: go build -tags dev ./...
+
+      - name: Testes (go test + cobertura)
+        run: go test ./... -cover
+
+  go-quality:
+    name: go (gofmt + race)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.23"
+          cache-dependency-path: go.sum
+
+      # gofmt não compila — não precisa do dist nem dos toolchains por-SO.
+      - name: Checar formatação (gofmt)
+        run: |
+          unformatted=$(gofmt -l .)
+          if [ -n "$unformatted" ]; then
+            echo "Arquivos fora do padrão gofmt:"
+            echo "$unformatted"
+            exit 1
+          fi
+
+      # Os pacotes internos compilam no Linux (stubs _other.go). O detector de
+      # corrida é mais confiável aqui e cobre a lógica OS-agnóstica. Não inclui
+      # o pacote raiz (que exigiria o dist), então roda sem buildar o frontend.
+      - name: Testes com detector de corrida (pacotes internos)
+        run: go test ./internal/... -race -cover
