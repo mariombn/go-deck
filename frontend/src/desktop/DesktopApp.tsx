@@ -37,6 +37,13 @@ export default function DesktopApp() {
   const [qr, setQr] = useState<string>('');
   const [editing, setEditing] = useState<Editing | null>(null);
   const [saveMsg, setSaveMsg] = useState<string>('');
+  // Orientação do preview do grid: 'paisagem' = canônico (como hoje); 'retrato'
+  // = transposto (como o celular renderiza em portrait). Estado efêmero e global
+  // (vale pra qualquer página ativa), só de visualização — não vai pro config
+  // nem pro WS, e reseta pra paisagem ao recarregar. As células continuam
+  // editáveis nas duas orientações (DeckGrid mapeia a célula exibida de volta
+  // pra posição canônica).
+  const [orientation, setOrientation] = useState<'paisagem' | 'retrato'>('paisagem');
 
   const refreshNetwork = useCallback(async () => {
     const info = (await App.GetNetworkInfo()) as unknown as NetworkInfo;
@@ -247,10 +254,34 @@ export default function DesktopApp() {
               />
             </label>
             <span className="text-xs text-slate-500">Clique numa célula para adicionar/editar um botão.</span>
+
+            {/* Toggle de orientação: alterna o preview do grid entre paisagem
+                (canônico) e retrato (transposto, como o celular em portrait). */}
+            <div className="ml-auto inline-flex overflow-hidden rounded-lg border border-slate-700 text-sm">
+              {(['paisagem', 'retrato'] as const).map((o) => (
+                <button
+                  key={o}
+                  onClick={() => setOrientation(o)}
+                  className={`px-3 py-1 ${
+                    orientation === o
+                      ? 'bg-indigo-600 text-white'
+                      : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                  }`}
+                  title={o === 'retrato' ? 'Pré-visualizar como o celular em pé' : 'Pré-visualizar como o celular deitado'}
+                >
+                  {o === 'paisagem' ? '🖥️ Paisagem' : '📱 Retrato'}
+                </button>
+              ))}
+            </div>
           </div>
 
-          <div className="mx-auto max-w-3xl">
-            <DeckGrid page={activePage} mode="desktop" onCellClick={openCell} />
+          <div className={`mx-auto ${orientation === 'retrato' ? 'max-w-xs' : 'max-w-3xl'}`}>
+            <DeckGrid
+              page={activePage}
+              mode="desktop"
+              transpose={orientation === 'retrato'}
+              onCellClick={openCell}
+            />
           </div>
         </section>
 
