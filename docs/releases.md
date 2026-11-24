@@ -58,8 +58,12 @@ arquivos de `/usr/share` com uma versão antiga.
 | macOS | `go-deck-macos.zip` (contém `.app`) |
 | Ubuntu 22.04 / amd64 | AppImage, `.deb`, `.rpm` e SHA-256 |
 
-- **Release publicado:** anexa os arquivos ao release correspondente. A tag deve ser SemVer, como `v1.2.3` ou `v1.2.3-beta.1`.
-- **Execução manual (`workflow_dispatch`):** guarda artifacts do run, sem publicar release. Linux recebe versão `0.0.0-dev.<número do run>`.
+- **Push de tag `v*`:** compila todas as plataformas, valida os pacotes, reúne os artifacts e só então cria/publica o release. As notas completas devem estar em `docs/release-notes/<tag>.md`.
+- **Release publicado manualmente:** atualiza os anexos do release correspondente. Se houver notas versionadas para a tag, aplica também esse texto.
+- **Tags curtas:** `scripts/normalize-release-version.sh` traduz `v0.1` para `0.1.0` nos pacotes, preservando o nome/tag públicos. Também aceita tags como `v1.2.3` e `v1.2.3-beta.1`.
+- **Execução manual (`workflow_dispatch`):** guarda artifacts do run, sem publicar release, com versão `0.0.0-dev.<número do run>`.
+- `scripts/set-build-version.mjs` sincroniza os metadados numéricos Windows/macOS no runner; o arquivo do repositório não precisa ser alterado para cada release.
+- O job final tem permissão de escrita e usa somente o `GITHUB_TOKEN`; não exige PAT pessoal nem dispara outra execução recursiva de release. `SHA256SUMS` cobre os binários/pacotes de todas as plataformas.
 - Wails é fixado em **v2.12.0**, a mesma versão do `go.mod`.
 - Linux compila com **`webkit2_41`**. Usa Ubuntu 22.04 como base glibc 2.35 e publica, nesta etapa, somente **amd64/x86_64**.
 - O `.deb` e o `.rpm` são gerados pelo **nFPM v2.41.3**; AppImage usa **appimagetool 1.9.1** e runtime **20251108**, ambos com download validado por SHA-256. Não usa `continuous` nem FUSE durante o build.

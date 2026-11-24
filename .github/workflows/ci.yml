@@ -46,7 +46,10 @@ jobs:
         working-directory: .
         run: |
           python3 scripts/check-icons.py
-          for script in scripts/build-linux.sh scripts/install-linux-packaging-tools.sh scripts/package-linux.sh scripts/check-linux-packages.sh; do
+          node --check scripts/set-build-version.mjs
+          test "$(bash scripts/normalize-release-version.sh v0.1)" = 0.1.0
+          test "$(bash scripts/normalize-release-version.sh v1.2.3-beta.1)" = 1.2.3-beta.1
+          for script in scripts/build-linux.sh scripts/install-linux-packaging-tools.sh scripts/package-linux.sh scripts/check-linux-packages.sh scripts/normalize-release-version.sh; do
             bash -n "$script"
           done
           for script in build/linux/AppRun build/linux/postinstall.sh build/linux/postremove.sh; do
@@ -113,8 +116,13 @@ jobs:
         if: runner.os == 'Linux'
         run: go build -tags production,webkit2_41 ./...
 
-      - name: Build da variante dev (reverse-proxy)
+      - name: Build da variante dev (reverse-proxy, Windows/macOS)
+        if: runner.os != 'Linux'
         run: go build -tags dev ./...
+
+      - name: Build da variante dev (reverse-proxy, Linux / WebKitGTK 4.1)
+        if: runner.os == 'Linux'
+        run: go build -tags dev,webkit2_41 ./...
 
       - name: Testes (go test + cobertura)
         run: go test ./... -cover

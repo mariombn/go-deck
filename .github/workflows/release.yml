@@ -1,14 +1,21 @@
 # Runners nativos: Wails depende dos webviews de cada SO e macOS usa CGO.
-# Release publicado -> anexos no GitHub; execução manual -> artifacts do run.
+# Tag v* -> compila, valida e publica o release somente após todos os builds.
+# Release publicado manualmente -> atualiza anexos; workflow_dispatch -> artifacts.
 name: release
 
 on:
+  push:
+    tags: ['v*']
   release:
     types: [published]
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
+
+concurrency:
+  group: release-${{ github.event.release.tag_name || github.ref_name }}
+  cancel-in-progress: false
 
 jobs:
   build:
@@ -45,6 +52,17 @@ jobs:
           node-version: "22"
           cache: npm
           cache-dependency-path: frontend/package-lock.json
+
+      - name: Normalizar versão e atualizar metadados nativos
+        id: version
+        shell: bash
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name || (github.event_name == 'push' && github.ref_name) || '' }}
+          RUN_NUMBER: ${{ github.run_number }}
+        run: |
+          version="$(bash scripts/normalize-release-version.sh "${RELEASE_TAG:-0.0.0-dev.${RUN_NUMBER}}")"
+          echo "value=$version" >> "$GITHUB_OUTPUT"
+          node scripts/set-build-version.mjs "$version"
 
       - name: Dependências nativas Linux
         if: runner.os == 'Linux'
@@ -84,26 +102,69 @@ jobs:
       - name: Gerar AppImage, .deb e .rpm
         if: runner.os == 'Linux'
         env:
-          # Dados do evento entram por env, nunca interpolados num comando.
-          RELEASE_TAG: ${{ github.event.release.tag_name }}
-          RUN_NUMBER: ${{ github.run_number }}
+          VERSION: ${{ steps.version.outputs.value }}
         run: |
-          version="${RELEASE_TAG:-0.0.0-dev.${RUN_NUMBER}}"
-          bash scripts/package-linux.sh "$version"
-          bash scripts/check-linux-packages.sh "${version#v}"
+          bash scripts/package-linux.sh "$VERSION"
+          bash scripts/check-linux-packages.sh "$VERSION"
 
-      - name: Anexar ao release
-        if: github.event_name == 'release'
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ github.event.release.tag_name }}
-          files: ${{ matrix.asset }}
-          fail_on_unmatched_files: true
-
-      - name: Subir artifact (run manual)
-        if: github.event_name == 'workflow_dispatch'
+      - name: Guardar pacotes validados
         uses: actions/upload-artifact@v4
         with:
           name: go-deck-${{ runner.os }}
           path: ${{ matrix.asset }}
           if-no-files-found: error
+
+  publish:
+    name: publicar release e pacotes
+    needs: build
+    if: github.event_name != 'workflow_dispatch'
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Baixar todos os pacotes
+        uses: actions/download-artifact@v4
+        with:
+          pattern: go-deck-*
+          merge-multiple: true
+          path: dist
+
+      - name: Preparar notas e validar a tag
+        id: notes
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name || github.ref_name }}
+          EVENT_NAME: ${{ github.event_name }}
+        run: |
+          bash scripts/normalize-release-version.sh "$RELEASE_TAG"
+          notes="docs/release-notes/$RELEASE_TAG.md"
+          if [ -f "$notes" ]; then
+            echo "path=$notes" >> "$GITHUB_OUTPUT"
+          elif [ "$EVENT_NAME" = push ]; then
+            echo "::error::Faltam as notas completas em $notes"
+            exit 1
+          fi
+
+      - name: Checksums de todos os instaladores/binários
+        working-directory: dist
+        run: sha256sum go-deck.exe go-deck-macos.zip *.AppImage *.deb *.rpm > SHA256SUMS
+
+      # GITHUB_TOKEN não dispara outro workflow de release, evitando duplicação
+      # após a publicação iniciada pela tag. Não depende de PAT pessoal.
+      - name: Publicar notas e anexar todos os pacotes
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event.release.tag_name || github.ref_name }}
+          name: ${{ github.event.release.tag_name || github.ref_name }}
+          body_path: ${{ steps.notes.outputs.path }}
+          make_latest: "true"
+          files: |
+            dist/go-deck.exe
+            dist/go-deck-macos.zip
+            dist/*.AppImage
+            dist/*.deb
+            dist/*.rpm
+            dist/*.sha256
+            dist/SHA256SUMS
+          fail_on_unmatched_files: true
