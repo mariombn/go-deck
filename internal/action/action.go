@@ -38,6 +38,7 @@ const (
 // Execute.
 type ExecContext struct {
 	Input    input.InputController
+	Mouse    input.MouseController
 	Launcher launch.Launcher
 	OBS      obs.Controller
 }
@@ -61,6 +62,13 @@ type Action interface {
 type Spec struct {
 	Type string   `json:"type"`
 	Keys []string `json:"keys,omitempty"`
+	// KeySequence preserva a ordem de até 64 combinações independentes.
+	// Ausente = combo legado em Keys; as duas formas são mutuamente exclusivas.
+	KeySequence [][]string `json:"keySequence,omitempty"`
+	MouseOp     string     `json:"mouseOp,omitempty"`
+	MouseButton string     `json:"mouseButton,omitempty"`
+	MouseX      int        `json:"mouseX,omitempty"`
+	MouseY      int        `json:"mouseY,omitempty"`
 	// HoldMs (keypress): se > 0, "apertar e manter" o combo por esses
 	// milissegundos antes de soltar. 0/ausente = toque rápido.
 	HoldMs int      `json:"holdMs,omitempty"`
@@ -86,13 +94,28 @@ func (s Spec) Build() (Action, error) {
 func (s Spec) build(depth int) (Action, error) {
 	switch s.Type {
 	case "keypress":
-		if len(s.Keys) == 0 {
+		if len(s.Keys) == 0 && len(s.KeySequence) == 0 {
 			return nil, i18n.New("errors.action.keypressNoKeys", nil)
+		}
+		if len(s.KeySequence) > 64 || (len(s.KeySequence) > 0 && len(s.Keys) > 0) {
+			return nil, i18n.New("errors.action.keySequenceInvalid", nil)
+		}
+		for _, combo := range s.KeySequence {
+			if len(combo) == 0 {
+				return nil, i18n.New("errors.action.keySequenceInvalid", nil)
+			}
 		}
 		if s.HoldMs < 0 || s.HoldMs > maxHoldMs {
 			return nil, i18n.New("errors.action.holdInvalid", map[string]any{"ms": s.HoldMs, "max": maxHoldMs})
 		}
-		return KeypressAction{Keys: s.Keys, HoldMs: s.HoldMs}, nil
+		return KeypressAction{Keys: s.Keys, HoldMs: s.HoldMs, KeySequence: s.KeySequence}, nil
+
+	case "mouse":
+		event := input.MouseEvent{Op: s.MouseOp, Button: s.MouseButton, X: s.MouseX, Y: s.MouseY, HoldMs: s.HoldMs}
+		if err := input.ValidateMouse(event); err != nil {
+			return nil, err
+		}
+		return MouseAction{Event: event}, nil
 
 	case "launch":
 		if s.Path == "" {
@@ -164,12 +187,36 @@ func (s Spec) build(depth int) (Action, error) {
 // mantém o combo pressionado por essa duração (em milissegundos) antes de
 // soltar.
 type KeypressAction struct {
-	Keys   []string
-	HoldMs int
+	Keys        []string
+	HoldMs      int
+	KeySequence [][]string
 }
 
 func (k KeypressAction) Execute(ctx ExecContext) error {
-	return ctx.Input.SendKeys(k.Keys, k.HoldMs)
+	if len(k.KeySequence) == 0 {
+		return ctx.Input.SendKeys(k.Keys, k.HoldMs)
+	}
+	for _, combo := range k.KeySequence {
+		if err := input.ValidateKeys(combo); err != nil {
+			return err
+		}
+	}
+	for i, combo := range k.KeySequence {
+		if err := ctx.Input.SendKeys(combo, k.HoldMs); err != nil {
+			return i18n.Wrap("errors.action.step", map[string]any{"n": i + 1}, err)
+		}
+	}
+	return nil
+}
+
+// MouseAction funciona isoladamente ou como passo de uma macro sequence.
+type MouseAction struct{ Event input.MouseEvent }
+
+func (m MouseAction) Execute(ctx ExecContext) error {
+	if ctx.Mouse == nil {
+		return i18n.New("errors.mouse.unavailable", nil)
+	}
+	return ctx.Mouse.SendMouse(m.Event)
 }
 
 // LaunchAction abre um programa (fire-and-forget), sem shell.

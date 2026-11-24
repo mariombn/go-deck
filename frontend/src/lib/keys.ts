@@ -50,6 +50,18 @@ function codeToName(code: string): string | null {
   if (/^Numpad[0-9]$/.test(code)) return code.slice(6);
   if (/^F([1-9]|1[0-2])$/.test(code)) return code.toLowerCase();
   switch (code) {
+    case 'Minus': return 'minus';
+    case 'Equal': return 'equal';
+    case 'BracketLeft': return 'leftbracket';
+    case 'BracketRight': return 'rightbracket';
+    case 'Backslash': return 'backslash';
+    case 'Semicolon': return 'semicolon';
+    case 'Quote': return 'apostrophe';
+    case 'Comma': return 'comma';
+    case 'Period': return 'period';
+    case 'Slash': return 'slash';
+    case 'Backquote': return 'grave';
+    case 'CapsLock': return 'capslock';
     case 'ArrowUp': return 'up';
     case 'ArrowDown': return 'down';
     case 'ArrowLeft': return 'left';
@@ -100,6 +112,8 @@ export function keyLabel(name: string): string {
   if (special) return special.label.replace(/^[^\s]+\s/, '');
   const map: Record<string, string> = {
     ctrl: 'Ctrl', shift: 'Shift', alt: 'Alt', win: 'Win',
+    minus: '-', equal: '=', leftbracket: '[', rightbracket: ']', backslash: '\\',
+    semicolon: ';', apostrophe: "'", comma: ',', period: '.', slash: '/', grave: '`', capslock: 'Caps',
     lctrl: 'Ctrl Esq', rctrl: 'Ctrl Dir', lalt: 'Alt Esq', ralt: 'AltGr',
     enter: 'Enter', esc: 'Esc', tab: 'Tab', space: 'Space',
     backspace: 'Backspace', delete: 'Del', insert: 'Ins',

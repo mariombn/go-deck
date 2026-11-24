@@ -1,0 +1,13 @@
+[Desktop Entry]
+Type=Application
+Name=go-deck
+GenericName=Macro Deck
+GenericName[pt_BR]=Deck de macros
+Comment=Control your computer with a phone or USB deck
+Comment[pt_BR]=Controle seu computador pelo celular ou por um deck USB
+Exec=go-deck
+Icon=go-deck
+Terminal=false
+Categories=Utility;
+StartupNotify=true
+StartupWMClass=go-deck

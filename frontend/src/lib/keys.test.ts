@@ -87,7 +87,7 @@ describe('eventToCombo', () => {
 
   it('devolve null se a tecla principal é desconhecida', () => {
     expect(eventToCombo(ev('F13'), new Set())).toBeNull()
-    expect(eventToCombo(ev('Backquote'), new Set())).toBeNull()
+    expect(eventToCombo(ev('F24'), new Set())).toBeNull()
   })
 
   it('devolve null se o evento é só um modificador (sem tecla principal)', () => {

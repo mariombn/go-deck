@@ -67,6 +67,8 @@ type Button struct {
 	// cor de fundo (hex); vazio = padrão.
 	Icon  string `json:"icon,omitempty"`
 	Color string `json:"color,omitempty"`
+	// HideLabel mantém o nome para organização, sem desenhá-lo no botão/LCD.
+	HideLabel bool `json:"hideLabel,omitempty"`
 }
 
 // Page é um grid independente ("área"), com tamanho e botões próprios. O

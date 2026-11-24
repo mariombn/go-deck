@@ -22,6 +22,16 @@
     "saveConfig": "Salvar configuração",
     "saved": "Salvo ✓"
   },
+  "hardware": {
+    "connected": "Conectado",
+    "waiting": "Aguardando USB…",
+    "disabled": "Desativado",
+    "enable": "Controlar USB",
+    "page": "Página no hardware",
+    "home": "Início",
+    "hint": "Usa a configuração salva. Mantenha o OpenDeck fechado.",
+    "cropWarning": "O Vision 2 mostra apenas as 3 primeiras linhas e 5 primeiras colunas."
+  },
   "grids": {
     "heading": "Grids",
     "noPages": "Sem páginas.",
@@ -32,7 +42,7 @@
     "reorderAria": "Reordenar grid",
     "rows": "Linhas",
     "cols": "Colunas",
-    "cellHint": "Clique numa célula para adicionar/editar um botão.",
+    "cellHint": "Clique para editar. Arraste para mover ou trocar botões; depois salve.",
     "landscape": "🖥️ Paisagem",
     "portrait": "📱 Retrato",
     "landscapeTitle": "Pré-visualizar como o celular deitado",
@@ -47,6 +57,7 @@
     "position": "linha {{row}} · coluna {{col}}",
     "label": "Rótulo",
     "labelPlaceholder": "Ex.: Mute Mic",
+    "hideLabel": "Ocultar rótulo no botão (manter nome para organização)",
     "appearance": "Aparência",
     "save": "Salvar botão"
   },
@@ -54,6 +65,7 @@
     "typeLabel": "Tipo de ação",
     "types": {
       "keypress": "Atalho de teclas",
+      "mouse": "Mouse",
       "launch": "Abrir programa",
       "url": "Abrir URL",
       "obs": "OBS Studio",
@@ -65,6 +77,17 @@
       "holdLabel": "Segurar por",
       "holdHint": "(segundos; 0 = toque rápido)",
       "holdHelp": "Mantém o combo pressionado e solta após o tempo. Máx. {{max}}s."
+    },
+    "mouse": {
+      "operation": "Operação do mouse",
+      "button": "Botão do mouse",
+      "mouseX": "Horizontal (X)",
+      "mouseY": "Vertical (Y)",
+      "moveHelp": "Movimento relativo: X positivo vai à direita; Y positivo vai para baixo. A aceleração do sistema pode alterar a distância.",
+      "scrollHelp": "Rolagem em passos: X positivo vai à direita; Y positivo vai para cima. Use valores negativos para inverter.",
+      "help": "Usa a posição atual do ponteiro. Também pode ser um passo de uma sequência de ações.",
+      "ops": {"click": "Clique", "double_click": "Clique duplo", "move": "Mover ponteiro", "scroll": "Rolar"},
+      "buttons": {"left": "Esquerdo", "right": "Direito", "middle": "Central", "back": "Voltar (lateral)", "forward": "Avançar (lateral)"}
     },
     "launch": {
       "pathLabel": "Caminho do programa",
@@ -147,7 +170,8 @@
     "appDialog": {
       "title": "Escolher aplicativo",
       "exeFilter": "Aplicativos (*.exe, *.lnk)",
-      "appFilter": "Aplicativos (*.app)"
+      "appFilter": "Aplicativos (*.app)",
+      "linuxFilter": "Aplicativos Linux (*.desktop)"
     }
   },
   "keyCapture": {
@@ -155,6 +179,20 @@
     "capture": "Capturar",
     "cancel": "Cancelar",
     "specialKeys": "Teclas especiais (clique para definir):"
+  },
+  "virtualKeyboard": {
+    "title": "Teclado virtual",
+    "combo": "Combinação (atalho)",
+    "sequence": "Sequência em ordem",
+    "comboHelp": "Clique nas teclas do atalho. Modificadores ficam pressionados durante a combinação. Pontuação usa posições físicas do layout ativo.",
+    "sequenceHelp": "Monte uma combinação e adicione um passo. Os passos executam em ordem, soltando as teclas entre eles. A combinação atual também entra ao aplicar. Máximo: 64 passos.",
+    "current": "Combinação atual:",
+    "clear": "Limpar combinação",
+    "addStep": "+ Adicionar combinação à sequência",
+    "moveUp": "Antecipar passo {{n}}",
+    "moveDown": "Adiar passo {{n}}",
+    "removeStep": "Remover passo {{n}}",
+    "apply": "Aplicar teclas"
   },
   "config": {
     "title": "Configurações",
@@ -197,6 +235,7 @@
   "errors": {
     "action": {
       "keypressNoKeys": "keypress sem teclas",
+      "keySequenceInvalid": "sequência inválida: use de 1 a 64 combinações não vazias, sem definir um combo separado",
       "holdInvalid": "duração de retenção inválida: {{ms}} ms (use de 0 a {{max}})",
       "launchNoPath": "launch sem caminho do programa",
       "urlEmpty": "url vazia",
@@ -211,6 +250,14 @@
       "unknownType": "tipo de ação desconhecido: {{type}}",
       "navigateViaWS": "navegação é tratada no cliente, não via WS",
       "obsUnavailable": "OBS não disponível"
+    },
+    "mouse": {
+      "invalidButton": "botão do mouse inválido",
+      "invalidOperation": "operação do mouse inválida",
+      "invalidHold": "clique duplo não aceita duração de retenção",
+      "invalidMovement": "deslocamento/rolagem inválidos: use inteiros entre -{{max}} e {{max}}, com ao menos um eixo não zero e sem retenção",
+      "unavailable": "controle de mouse não disponível neste SO",
+      "sendFailed": "não foi possível enviar o evento de mouse"
     },
     "input": {
       "comboEmpty": "combo vazio",

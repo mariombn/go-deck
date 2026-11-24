@@ -154,6 +154,10 @@ func (s *Server) handleWS(w http.ResponseWriter, r *http.Request) {
 	go c.readPump()
 }
 
+// PressButton compartilha o caminho de execução com controladores locais
+// (USB). Não adiciona endpoint de rede nem contorna o token do WebSocket.
+func (s *Server) PressButton(buttonID string) (bool, string) { return s.press(buttonID) }
+
 // press localiza o botão, constrói a ação e a executa. Devolve (ok, erro).
 func (s *Server) press(buttonID string) (bool, string) {
 	// Idioma global: a borda traduz os erros antes de devolvê-los no ACK do WS
@@ -168,7 +172,9 @@ func (s *Server) press(buttonID string) (bool, string) {
 		return false, i18n.Translate(lang, err)
 	}
 	cfg := s.store.Get()
+	mouse, _ := s.input.(input.MouseController)
 	ctx := action.ExecContext{
+		Mouse:    mouse,
 		Input:    s.input,
 		Launcher: s.launcher,
 		OBS:      obs.New(obsSettings(cfg.Integrations.OBS)),

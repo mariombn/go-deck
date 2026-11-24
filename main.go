@@ -6,10 +6,16 @@ import (
 	"github.com/wailsapp/wails/v2"
 	"github.com/wailsapp/wails/v2/pkg/options"
 	"github.com/wailsapp/wails/v2/pkg/options/assetserver"
+	"github.com/wailsapp/wails/v2/pkg/options/linux"
 )
 
 //go:embed all:frontend/dist
 var assets embed.FS
+
+// O mesmo desenho alimenta recursos nativos no Windows/macOS e a janela GTK.
+//
+//go:embed build/appicon.png
+var appIcon []byte
 
 func main() {
 	// Create an instance of the app structure. O mesmo embed.FS (frontend/dist)
@@ -26,6 +32,13 @@ func main() {
 		},
 		BackgroundColour: &options.RGBA{R: 27, G: 38, B: 54, A: 1},
 		OnStartup:        app.startup,
+		OnShutdown:       app.shutdown,
+		Linux: &linux.Options{
+			Icon:        appIcon,
+			ProgramName: "go-deck",
+			// Preserva a política padrão do Wails ao configurar o ícone.
+			WebviewGpuPolicy: linux.WebviewGpuPolicyNever,
+		},
 		Bind: []interface{}{
 			app,
 		},

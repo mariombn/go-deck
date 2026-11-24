@@ -1,14 +1,16 @@
 # go-deck
 
+<p align="center"><img src="build/appicon.svg" width="128" alt="go-deck icon" /></p>
+
 **English** · [Português](README.pt-BR.md)
 
 [![License: MIT](https://img.shields.io/github/license/mariombn/go-deck)](LICENSE)
 [![Latest release](https://img.shields.io/github/v/release/mariombn/go-deck)](https://github.com/mariombn/go-deck/releases/latest)
 [![Build](https://img.shields.io/github/actions/workflow/status/mariombn/go-deck/release.yml)](https://github.com/mariombn/go-deck/actions/workflows/release.yml)
-[![Platforms](https://img.shields.io/badge/platforms-Windows%20%7C%20macOS-blue)](#installation)
+[![Platforms](https://img.shields.io/badge/platforms-Windows%20%7C%20macOS%20%7C%20Linux-blue)](#installation)
 [![Stars](https://img.shields.io/github/stars/mariombn/go-deck?style=social)](https://github.com/mariombn/go-deck/stargazers)
 
-An open-source *Stream Deck*: a desktop app (**Windows & macOS**) that exposes
+An open-source *Stream Deck*: a desktop app (**Windows, macOS & Linux**) that exposes
 **multiple grids** of buttons on your local network. From your phone, via QR Code,
 you open the grids in a browser and, on tapping a button, your computer runs the
 configured action — from a **keyboard macro** to launching a program, opening a URL,
@@ -37,6 +39,14 @@ No extra hardware. Your phone becomes the deck.
    app isn't code-signed yet). Click **More info → Run anyway**.
 3. A window with the editor and the QR Code will open.
 
+### Linux / Rise Mode Vision 2
+
+Releases include **AppImage**, **`.deb`** and **`.rpm`** for x86_64. Native
+packages install a launcher, icons and USB rules. AppImage requires system
+GTK3/WebKitGTK 4.1. See [packages](docs/releases.md) and
+[build/USB setup](docs/linux.md) (pt-BR). The compiled binary is
+`build/bin/go-deck`; shortcuts work on Wayland and X11.
+
 ### macOS
 
 1. Download `go-deck-macos.zip`, unzip it, and drag `go-deck.app` into Applications.
@@ -49,6 +59,7 @@ No extra hardware. Your phone becomes the deck.
 
 - **Windows 10/11** (WebView2 is already included on Windows 11).
 - **macOS** (recent version).
+- **Linux** with GTK3/WebKitGTK; `uinput` for shortcuts and `hidraw` for Vision 2.
 - Phone and PC on the **same Wi-Fi network**.
 
 > **Heads up on security:** go-deck has no authentication. Anyone on the same Wi-Fi
@@ -72,12 +83,14 @@ The configuration is stored at:
 
 - **Windows:** `%APPDATA%/DeckPilot/config.json`
 - **macOS:** `~/Library/Application Support/DeckPilot/config.json`
+- **Linux:** `${XDG_CONFIG_HOME:-~/.config}/DeckPilot/config.json`
 
 ### Available actions
 
 | Type | What it does |
 |------|--------------|
-| **keypress** | Fires a simultaneous key combo (see the key model below). |
+| **keypress** | A combo or ordered sequence of combinations, with physical capture and a virtual keyboard. |
+| **mouse** | Click, double click, relative movement and scrolling; also available in action sequences. |
 | **launch** | Opens a program (`path` + `args`), via `os/exec` without a shell. |
 | **url** | Opens a URL in the OS default app. |
 | **obs** | Controls OBS: switch scene, record/stream, mute a source, trigger a hotkey. |
@@ -112,7 +125,7 @@ automatic contrast) and an icon — an **emoji** (searchable picker) **or an ima
 - Letters `a`–`z`, digits `0`–`9`, `f1`–`f12`
 - Specials: `enter`, `esc`, `tab`, `space`, `backspace`, `delete`, `insert`,
   `home`, `end`, `pageup`, `pagedown`, arrows (`up`/`down`/`left`/`right`)
-- Media: `mute`, `volup`, `voldown` — plus `playpause`, `nexttrack`, `prevtrack` (Windows only)
+- Media: `mute`, `volup`, `voldown` — plus `playpause`, `nexttrack`, `prevtrack` (Windows and Linux)
 - One button = **one simultaneous combo** (e.g. `["ctrl","shift","m"]`, or `["cmd","c"]` on Mac).
 
 ---
@@ -132,23 +145,27 @@ This is an early-stage project (POC posture). Please know the trade-offs:
   the app (an occupied port produces an explicit error, no automatic fallback).
 - `Ctrl+Alt+Del` and the Win key in a combo can't be captured by the browser (the
   OS intercepts them); use the special-key buttons for Win/media.
-- **Linux** isn't supported yet (stubs return an error; input is already isolated
-  behind an interface — see [Contributing](#contributing)).
+- **Linux:** shortcuts need `/dev/uinput` access. Vision 2 needs USB `hidraw`
+  access and OpenDeck closed. See [setup](docs/linux.md).
 - **macOS:** `keypress` actions require **Accessibility** permission. Media keys
   `playpause`/`nexttrack`/`prevtrack` are not supported on macOS.
 - The macOS app isn't signed/notarized — to open it the first time: right-click → Open.
 
 ---
 
+## Editor improvements
+
+The editor supports hidden labels (keeping their organizational name), bounded
+previews, drag-to-move/swap, dark WebKitGTK-compatible selectors and a virtual
+keyboard next to Capture. See [keyboard, mouse and layout](docs/editor-e-input.md)
+(pt-BR).
+
 ## Contributing
 
 Contributions are very welcome! Some great entry points:
 
-- **🐧 Linux support** — the architecture is already isolated behind interfaces;
-  only the native implementations are missing. Add
-  `internal/input/sendinput_linux.go` and `internal/launch/launcher_linux.go`
-  (use the `_other.go` stubs as a skeleton and adjust the build tags). Nothing else
-  needs to change.
+- **🐧 Linux and USB hardware** — test more distributions/compositors and add
+  devices using `internal/vision2` as a reference.
 - **A new Action or integration** — thanks to `ExecContext`, adding a capability is
   a single new field, no need to refactor the rest. See `internal/action/`.
 - **UX and bug fixes** are always welcome.
@@ -163,7 +180,7 @@ See [docs/kanban.md](docs/kanban.md) for what's planned.
 
 Prerequisites:
 
-- **Go 1.21+**
+- **Go 1.23+**
 - **Node.js LTS**
 - **Wails CLI v2:** `go install github.com/wailsapp/wails/v2/cmd/wails@latest`
 - **Windows:** WebView2 runtime (already on Windows 11); no CGO (keyboard via `SendInput` in pure Go)
@@ -189,6 +206,7 @@ Produces the app with the React bundle embedded:
 
 - **Windows:** `build/bin/go-deck.exe`
 - **macOS:** `build/bin/go-deck.app`
+- **Linux:** `build/bin/go-deck` (`bash scripts/build-linux.sh`)
 
 ---
 

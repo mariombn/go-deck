@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"embed"
+	"io"
 	"log"
 	"runtime"
 	"time"
@@ -13,19 +14,23 @@ import (
 	"go-deck/internal/input"
 	"go-deck/internal/launch"
 	"go-deck/internal/server"
+	"go-deck/internal/vision2"
 
 	wailsruntime "github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
 // App é a struct exposta ao frontend desktop via bindings do Wails.
 type App struct {
-	ctx      context.Context
-	assets   embed.FS
-	input    input.InputController
-	launcher launch.Launcher
-	appicons appicon.Provider
-	store    *config.Store
-	server   *server.Server
+	ctx          context.Context
+	assets       embed.FS
+	input        input.InputController
+	launcher     launch.Launcher
+	appicons     appicon.Provider
+	store        *config.Store
+	server       *server.Server
+	hardware     *vision2.Manager
+	stopHardware context.CancelFunc
+	hardwareDone chan struct{}
 }
 
 // NewApp cria a App, já com o controller de input e o launcher do SO atual.
@@ -57,6 +62,58 @@ func (a *App) startup(ctx context.Context) {
 
 	a.server = server.New(store, a.input, a.launcher, a.assets)
 	a.server.Start()
+
+	a.hardware = vision2.New(a.server.PressButton)
+	a.hardware.UpdateConfig(store.Get())
+	hardwareCtx, cancel := context.WithCancel(ctx)
+	a.stopHardware = cancel
+	a.hardwareDone = make(chan struct{})
+	go func() {
+		defer close(a.hardwareDone)
+		a.hardware.Run(hardwareCtx)
+	}()
+}
+
+// shutdown solta o USB e destrói o teclado virtual antes de sair.
+func (a *App) shutdown(context.Context) {
+	if a.stopHardware != nil {
+		a.stopHardware()
+		<-a.hardwareDone
+	}
+	if closer, ok := a.input.(io.Closer); ok {
+		closer.Close()
+	}
+}
+
+// GetHardwareInfo devolve o estado local do Rise Mode Vision 2.
+func (a *App) GetHardwareInfo() vision2.Info {
+	if a.hardware == nil {
+		return vision2.Info{}
+	}
+	return a.hardware.Info()
+}
+
+// SetHardwareEnabled permite liberar o USB antes de abrir outro controlador.
+func (a *App) SetHardwareEnabled(enabled bool) {
+	if a.hardware != nil {
+		a.hardware.SetEnabled(enabled)
+	}
+}
+
+// SelectHardwarePage muda apenas a página do deck físico (não a do celular).
+func (a *App) SelectHardwarePage(id string) error {
+	if a.hardware == nil {
+		return nil
+	}
+	return a.hardware.SelectPage(id)
+}
+
+// SetHardwareImages recebe a aparência renderizada pelo canvas do desktop.
+func (a *App) SetHardwareImages(revision uint64, images map[string]string) error {
+	if a.hardware == nil {
+		return nil
+	}
+	return a.hardware.SetImages(revision, images)
 }
 
 // --- Bindings expostos ao frontend desktop ---
@@ -99,6 +156,9 @@ func (a *App) SaveConfig(cfg config.DeckConfig) (config.DeckConfig, error) {
 	}
 	if a.server != nil {
 		a.server.BroadcastConfig()
+	}
+	if a.hardware != nil {
+		a.hardware.UpdateConfig(saved)
 	}
 	return saved, nil
 }
@@ -158,6 +218,8 @@ func (a *App) PickAppIcon() (string, error) {
 		filters = []wailsruntime.FileFilter{{DisplayName: i18n.T(lang, "appearance.appDialog.exeFilter", nil), Pattern: "*.exe;*.lnk"}}
 	case "darwin":
 		filters = []wailsruntime.FileFilter{{DisplayName: i18n.T(lang, "appearance.appDialog.appFilter", nil), Pattern: "*.app"}}
+	case "linux":
+		filters = []wailsruntime.FileFilter{{DisplayName: i18n.T(lang, "appearance.appDialog.linuxFilter", nil), Pattern: "*.desktop"}}
 	}
 	path, err := wailsruntime.OpenFileDialog(a.ctx, wailsruntime.OpenDialogOptions{
 		Title:   i18n.T(lang, "appearance.appDialog.title", nil),

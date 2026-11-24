@@ -24,12 +24,13 @@ export default function ButtonEditor({draft, isNew, pages, onSave, onDelete, onC
   const [action, setAction] = useState<Action>(draft.action);
   const [icon, setIcon] = useState<string | undefined>(draft.icon);
   const [color, setColor] = useState<string | undefined>(draft.color);
+  const [hideLabel, setHideLabel] = useState(draft.hideLabel ?? false);
 
   const save = () => {
-    onSave({...draft, label: label.trim(), action, icon: icon || undefined, color: color || undefined});
+    onSave({...draft, label: label.trim(), action, icon: icon || undefined, color: color || undefined, hideLabel: hideLabel || undefined});
   };
 
-  const preview: ButtonConfig = {...draft, label: label.trim(), action, icon, color};
+  const preview: ButtonConfig = {...draft, label: label.trim(), action, icon, color, hideLabel};
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
@@ -43,7 +44,7 @@ export default function ButtonEditor({draft, isNew, pages, onSave, onDelete, onC
 
         <div className="grid gap-6 md:grid-cols-2">
           {/* Coluna esquerda: rótulo + ação */}
-          <div>
+          <div className="min-w-0">
             <label className="mb-1 block text-sm text-slate-400">{t('buttonEditor.label')}</label>
             <input
               autoFocus
@@ -52,14 +53,18 @@ export default function ButtonEditor({draft, isNew, pages, onSave, onDelete, onC
               placeholder={t('buttonEditor.labelPlaceholder')}
               className="mb-4 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 outline-none focus:border-indigo-500"
             />
+            <label className="mb-4 flex items-center gap-2 text-sm text-slate-300">
+              <input type="checkbox" checked={hideLabel} onChange={(event) => setHideLabel(event.target.checked)} />
+              {t('buttonEditor.hideLabel')}
+            </label>
             <ActionFields value={action} onChange={setAction} pages={pages} />
           </div>
 
           {/* Coluna direita: aparência */}
-          <div className="md:border-l md:border-slate-700 md:pl-6">
+          <div className="min-w-0 md:border-l md:border-slate-700 md:pl-6">
             <div className="mb-3 flex items-center justify-between">
               <h3 className="text-sm font-semibold text-slate-300">{t('buttonEditor.appearance')}</h3>
-              <div className="w-16">
+              <div className="h-20 w-20 shrink-0 overflow-hidden" data-testid="appearance-preview">
                 <DeckButton button={preview} mode="mobile" />
               </div>
             </div>

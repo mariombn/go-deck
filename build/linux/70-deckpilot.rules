@@ -1,0 +1,5 @@
+# Rise Mode Vision 2: acesso somente ao usuário da sessão local ativa.
+SUBSYSTEM=="hidraw", ATTRS{idVendor}=="0a00", ATTRS{idProduct}=="1002", MODE="0660", TAG+="uaccess"
+
+# Teclado virtual para atalhos em Wayland e X11 (sem executar o app como root).
+SUBSYSTEM=="misc", KERNEL=="uinput", MODE="0660", TAG+="uaccess", OPTIONS+="static_node=uinput"

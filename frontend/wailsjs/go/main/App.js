@@ -6,6 +6,10 @@ export function GetConfig() {
   return window['go']['main']['App']['GetConfig']();
 }
 
+export function GetHardwareInfo() {
+  return window['go']['main']['App']['GetHardwareInfo']();
+}
+
 export function GetNetworkInfo() {
   return window['go']['main']['App']['GetNetworkInfo']();
 }
@@ -26,8 +30,20 @@ export function SaveConfig(arg1) {
   return window['go']['main']['App']['SaveConfig'](arg1);
 }
 
+export function SelectHardwarePage(arg1) {
+  return window['go']['main']['App']['SelectHardwarePage'](arg1);
+}
+
 export function SetActiveIP(arg1) {
   return window['go']['main']['App']['SetActiveIP'](arg1);
+}
+
+export function SetHardwareEnabled(arg1) {
+  return window['go']['main']['App']['SetHardwareEnabled'](arg1);
+}
+
+export function SetHardwareImages(arg1, arg2) {
+  return window['go']['main']['App']['SetHardwareImages'](arg1, arg2);
 }
 
 export function SetLanguage(arg1) {

@@ -3,6 +3,7 @@ import {useTranslation} from 'react-i18next';
 import {OBSConfig} from '../types';
 import OBSPanel from './OBSPanel';
 import {LANGUAGES} from '../lib/i18n';
+import Select from '../components/Select';
 
 interface NetworkInfo {
   ips: string[];
@@ -88,10 +89,11 @@ export default function ConfigDrawer({
           <label htmlFor="lang-select" className="text-sm text-slate-400">
             {t('config.language')}
           </label>
-          <select
+          <Select
+            aria-label={t('config.language')}
             id="lang-select"
             value={language || i18n.language}
-            onChange={(e) => onChangeLanguage(e.target.value)}
+            onChange={onChangeLanguage}
             className="ml-auto rounded border border-slate-700 bg-slate-800 px-2 py-1 text-sm"
           >
             {LANGUAGES.map((l) => (
@@ -99,7 +101,7 @@ export default function ConfigDrawer({
                 {l.nativeName}
               </option>
             ))}
-          </select>
+          </Select>
         </div>
 
         {/* Abas */}
@@ -157,9 +159,10 @@ function MobileTab({
           {network && (network.ips?.length ?? 0) > 1 && (
             <label className="mb-3 block text-xs text-slate-400">
               {t('config.ipLabel')}
-              <select
+              <Select
+                aria-label={t('config.ipLabel')}
                 value={network.activeIP}
-                onChange={(e) => onChangeIP(e.target.value)}
+                onChange={onChangeIP}
                 className="mt-1 w-full rounded border border-slate-700 bg-slate-800 px-2 py-1 text-sm"
               >
                 {(network.ips ?? []).map((ip) => (
@@ -167,7 +170,7 @@ function MobileTab({
                     {ip}
                   </option>
                 ))}
-              </select>
+              </Select>
             </label>
           )}
         </>

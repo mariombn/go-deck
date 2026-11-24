@@ -2,7 +2,7 @@
 // dos botões, repasse do clique com (row,col,button), transpose e guardas
 // defensivas para grid/botões ausentes.
 
-import {render, screen} from '@testing-library/react';
+import {fireEvent, render, screen} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 // Inicializa o i18n (DeckGrid renderiza DeckButton, que usa useTranslation).
 import '../lib/i18n';
@@ -104,6 +104,26 @@ describe('DeckGrid', () => {
     const btn = container.querySelector('button')!;
     // flash "ok" injeta as classes ring-green/bg-green.
     expect(btn.className).toMatch(/bg-green-600/);
+  });
+
+  it('arrasta usando posições canônicas no preview transposto e não abre o editor ao soltar', () => {
+    const onMoveButton = vi.fn(), onCellClick = vi.fn();
+    const b = botao('b1', 0, 2, 'Origem');
+    const {container} = render(<DeckGrid page={pagina({buttons: [b]})} mode="desktop" transpose onMoveButton={onMoveButton} onCellClick={onCellClick} />);
+    const source = container.querySelector('[data-position="0-2"]')!;
+    const target = container.querySelector('[data-position="1-0"]')!;
+    const dataTransfer = {setData: vi.fn(), effectAllowed: '', dropEffect: ''};
+    fireEvent.dragStart(source, {dataTransfer});
+    fireEvent.dragOver(target, {dataTransfer});
+    fireEvent.drop(target, {dataTransfer});
+    fireEvent.click(target.querySelector('button')!);
+    expect(onMoveButton).toHaveBeenCalledWith({row: 0, col: 2}, {row: 1, col: 0});
+    expect(onCellClick).not.toHaveBeenCalled();
+  });
+
+  it('não habilita arraste no celular', () => {
+    const {container} = render(<DeckGrid page={pagina({buttons: [botao('b', 0, 0, 'Mobile')]})} mode="mobile" onMoveButton={vi.fn()} />);
+    expect(container.querySelector('[data-position="0-0"]')).toHaveAttribute('draggable', 'false');
   });
 
   describe('guardas defensivas', () => {

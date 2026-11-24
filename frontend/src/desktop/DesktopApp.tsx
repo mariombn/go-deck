@@ -4,7 +4,9 @@ import {ButtonConfig, DeckConfig, OBSConfig, Page} from '../types';
 import DeckGrid from '../components/DeckGrid';
 import ButtonEditor from './ButtonEditor';
 import ConfigDrawer from './ConfigDrawer';
+import HardwarePanel from './HardwarePanel';
 import {detectLanguage, isSupported, setLanguage} from '../lib/i18n';
+import {moveButton} from '../lib/grid';
 import * as App from '../../wailsjs/go/main/App';
 
 interface NetworkInfo {
@@ -34,6 +36,7 @@ function newPageId(): string {
 export default function DesktopApp() {
   const {t} = useTranslation();
   const [config, setConfig] = useState<DeckConfig | null>(null);
+  const [savedConfig, setSavedConfig] = useState<DeckConfig | null>(null);
   const [activePageId, setActivePageId] = useState<string>('');
   const [dirty, setDirty] = useState(false);
   const [network, setNetwork] = useState<NetworkInfo | null>(null);
@@ -79,6 +82,7 @@ export default function DesktopApp() {
       }
       setLanguage(lang);
       setConfig(cfg);
+      setSavedConfig(cfg);
       await refreshNetwork();
     })();
   }, [refreshNetwork]);
@@ -197,6 +201,7 @@ export default function DesktopApp() {
   const save = async () => {
     const saved = (await App.SaveConfig(config as any)) as unknown as DeckConfig;
     setConfig(saved);
+    setSavedConfig(saved);
     // Mantém a página ativa se ainda existir; senão volta à primeira.
     if (!saved.pages.some((p) => p.id === activePageId)) {
       setActivePageId(saved.pages[0]?.id ?? '');
@@ -242,6 +247,8 @@ export default function DesktopApp() {
           </button>
         </div>
       </header>
+
+      {savedConfig && <HardwarePanel config={savedConfig} />}
 
       <div className="flex flex-1 overflow-hidden">
         {/* Abas laterais de grids (páginas) */}
@@ -384,6 +391,10 @@ export default function DesktopApp() {
               mode="desktop"
               transpose={orientation === 'retrato'}
               onCellClick={openCell}
+              onMoveButton={(from, to) => {
+                const moved = moveButton(activePage, from, to);
+                if (moved !== activePage) replaceActivePage(moved);
+              }}
             />
           </div>
         </section>

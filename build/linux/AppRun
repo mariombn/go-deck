@@ -1,0 +1,15 @@
+#!/bin/sh
+# O WebKitGTK/GTK vêm do host para manter sandbox, drivers e temas coerentes.
+set -eu
+APPDIR="${APPDIR:-$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd)}"
+binary="$APPDIR/usr/bin/go-deck"
+if command -v ldd >/dev/null 2>&1; then
+  dependencies=$(ldd "$binary" 2>&1) || true
+  if printf '%s\n' "$dependencies" | grep -q 'not found'; then
+    printf '%s\n' 'go-deck: faltam bibliotecas do sistema (GTK3/WebKitGTK 4.1 ou glibc >= 2.35).' >&2
+    printf '%s\n' 'Consulte usr/share/doc/go-deck/linux.md dentro do AppImage extraído.' >&2
+    printf '%s\n' "$dependencies" >&2
+    exit 1
+  fi
+fi
+exec "$binary" "$@"

@@ -16,11 +16,15 @@ function basename(path: string): string {
 export function actionSummary(action: Action, t: TFunction): string {
   switch (action.type) {
     case 'keypress': {
-      const label = comboLabel(action.keys);
+      const label = action.keySequence?.length ? action.keySequence.map(comboLabel).join(' → ') : comboLabel(action.keys);
       const hold = action.holdMs ?? 0;
       // Formata sem casas desnecessárias: 2000ms -> "2s", 500ms -> "0.5s".
       return hold > 0 ? `${label} · ${(hold / 1000).toString()}s` : label;
     }
+    case 'mouse':
+      return action.mouseOp === 'move' || action.mouseOp === 'scroll'
+        ? `🖱 ${t(`actions.mouse.ops.${action.mouseOp}`)} (${action.mouseX ?? 0}, ${action.mouseY ?? 0})`
+        : `🖱 ${t(`actions.mouse.ops.${action.mouseOp}`)} · ${t(`actions.mouse.buttons.${action.mouseButton ?? 'left'}`)}`;
     case 'launch':
       return action.path ? '▶ ' + basename(action.path) : '▶ —';
     case 'url':

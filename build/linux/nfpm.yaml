@@ -1,0 +1,77 @@
+# Pacotes nativos: a versão é validada por scripts/package-linux.sh.
+name: go-deck
+arch: amd64
+platform: linux
+version: ${VERSION}
+release: 1
+section: utils
+priority: optional
+maintainer: Mario de Moraes <mariombn@gmail.com>
+vendor: go-deck
+homepage: https://github.com/mariombn/go-deck
+license: MIT
+description: |
+  Deck de macros para controlar o computador pelo celular ou por USB.
+  Editor desktop, atalhos globais, OBS e Rise Mode Vision 2.
+
+contents:
+  - src: build/bin/go-deck
+    dst: /usr/bin/go-deck
+    file_info:
+      mode: 0755
+  - src: build/linux/go-deck.desktop
+    dst: /usr/share/applications/go-deck.desktop
+  - src: build/appicon.svg
+    dst: /usr/share/icons/hicolor/scalable/apps/go-deck.svg
+  - src: build/linux/icons/go-deck-16.png
+    dst: /usr/share/icons/hicolor/16x16/apps/go-deck.png
+  - src: build/linux/icons/go-deck-24.png
+    dst: /usr/share/icons/hicolor/24x24/apps/go-deck.png
+  - src: build/linux/icons/go-deck-32.png
+    dst: /usr/share/icons/hicolor/32x32/apps/go-deck.png
+  - src: build/linux/icons/go-deck-48.png
+    dst: /usr/share/icons/hicolor/48x48/apps/go-deck.png
+  - src: build/linux/icons/go-deck-64.png
+    dst: /usr/share/icons/hicolor/64x64/apps/go-deck.png
+  - src: build/linux/icons/go-deck-128.png
+    dst: /usr/share/icons/hicolor/128x128/apps/go-deck.png
+  - src: build/linux/icons/go-deck-256.png
+    dst: /usr/share/icons/hicolor/256x256/apps/go-deck.png
+  - src: build/linux/icons/go-deck-512.png
+    dst: /usr/share/icons/hicolor/512x512/apps/go-deck.png
+  - src: build/linux/io.github.mariombn.go-deck.metainfo.xml
+    dst: /usr/share/metainfo/io.github.mariombn.go-deck.metainfo.xml
+  - src: build/linux/70-deckpilot.rules
+    dst: /usr/lib/udev/rules.d/70-deckpilot.rules
+  - src: build/linux/deckpilot-uinput.conf
+    dst: /usr/lib/modules-load.d/deckpilot-uinput.conf
+  - src: LICENSE
+    dst: /usr/share/licenses/go-deck/LICENSE
+  - src: docs/linux.md
+    dst: /usr/share/doc/go-deck/linux.md
+
+scripts:
+  postinstall: build/linux/postinstall.sh
+  postremove: build/linux/postremove.sh
+
+overrides:
+  deb:
+    depends:
+      - libc6 (>= ${GLIBC_VERSION})
+      - libgtk-3-0
+      - libwebkit2gtk-4.1-0
+      - libglib2.0-bin
+      - xdg-utils
+    recommends:
+      - udev
+      - kmod
+  rpm:
+    depends:
+      - glibc >= ${GLIBC_VERSION}
+      - gtk3
+      - webkit2gtk4.1
+      - glib2
+      - xdg-utils
+    recommends:
+      - systemd-udev
+      - kmod

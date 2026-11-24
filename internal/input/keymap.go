@@ -61,6 +61,12 @@ var keymap = map[string]vkey{
 	"right":     {0x27, true},  // VK_RIGHT (estendida)
 	"down":      {0x28, true},  // VK_DOWN (estendida)
 
+	// Pontuação (posições físicas; o layout ativo define o caractere).
+	"minus": {0xBD, false}, "equal": {0xBB, false},
+	"leftbracket": {0xDB, false}, "rightbracket": {0xDD, false}, "backslash": {0xDC, false},
+	"semicolon": {0xBA, false}, "apostrophe": {0xDE, false}, "comma": {0xBC, false},
+	"period": {0xBE, false}, "slash": {0xBF, false}, "grave": {0xC0, false}, "capslock": {0x14, false},
+
 	// Teclas de mídia (caso de uso clássico de um deck)
 	"volup":     {0xAF, true}, // VK_VOLUME_UP
 	"voldown":   {0xAE, true}, // VK_VOLUME_DOWN

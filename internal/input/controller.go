@@ -1,7 +1,6 @@
-// Package input isola a simulação de teclado atrás de uma interface,
-// permitindo trocar a implementação por SO no futuro (macOS/Linux) sem
-// alterar o restante do app. Na POC só existe a implementação Windows
-// (SendInput, Go puro — sem CGO).
+// Package input isola teclado e mouse por interface. Windows usa SendInput,
+// macOS usa CGEvent e Linux usa dispositivos virtuais uinput (Wayland/X11).
+// MouseController é uma capacidade separada para preservar clientes só de teclado.
 package input
 
 // InputController abstrai o envio de combinações de teclas ao sistema
@@ -16,9 +15,8 @@ type InputController interface {
 	SendKeys(keys []string, holdMs int) error
 }
 
-// New devolve a implementação adequada ao SO atual. No Windows é o
-// SendInput nativo; em outros SOs é um stub que retorna erro (a POC só
-// tem como alvo o Windows, mas o código compila cross-platform).
+// New devolve a implementação adequada ao SO atual. Os controladores nativos
+// também implementam MouseController; SOs não suportados usam stubs.
 func New() InputController {
 	return newController()
 }

@@ -8,6 +8,7 @@ import {render, screen, fireEvent} from '@testing-library/react';
 import '../lib/i18n';
 import ConfigDrawer from './ConfigDrawer';
 import {OBSConfig} from '../types';
+import {chooseSelect, selectOptions} from '../test/select';
 
 vi.mock('../../wailsjs/go/main/App', () => ({
   TestOBS: vi.fn(async () => undefined),
@@ -49,11 +50,11 @@ describe('ConfigDrawer — idioma', () => {
   it('lista os idiomas disponíveis e emite a troca', () => {
     const {onChangeLanguage} = setup();
     const select = screen.getByLabelText('Language') as HTMLSelectElement;
-    const codigos = Array.from(select.options).map((o) => o.value);
+    const codigos = selectOptions(select).map((option) => option.getAttribute('data-value'));
     // Pelo menos en e pt-BR (locales presentes no projeto).
     expect(codigos).toContain('en');
     expect(codigos).toContain('pt-BR');
-    fireEvent.change(select, {target: {value: 'pt-BR'}});
+    chooseSelect(select, 'pt-BR');
     expect(onChangeLanguage).toHaveBeenCalledWith('pt-BR');
   });
 });
@@ -68,8 +69,8 @@ describe('ConfigDrawer — aba mobile/QR', () => {
 
   it('com múltiplos IPs, troca o IP ativo', () => {
     const {onChangeIP} = setup();
-    const select = screen.getByDisplayValue('192.168.0.10') as HTMLSelectElement;
-    fireEvent.change(select, {target: {value: '10.0.0.5'}});
+    const select = screen.getByRole('combobox', {name: /Network IP/});
+    chooseSelect(select, '10.0.0.5');
     expect(onChangeIP).toHaveBeenCalledWith('10.0.0.5');
   });
 

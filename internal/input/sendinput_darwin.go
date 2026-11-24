@@ -61,6 +61,8 @@ var macModFlags = map[string]uint64{
 
 // cgKeymap mapeia nomes de teclas para CGKeyCode do macOS (layout ANSI).
 var cgKeymap = map[string]uint32{
+	"minus": 27, "equal": 24, "leftbracket": 33, "rightbracket": 30, "backslash": 42,
+	"semicolon": 41, "apostrophe": 39, "comma": 43, "period": 47, "slash": 44, "grave": 50, "capslock": 57,
 	// Modificadores (como teclas isoladas)
 	"ctrl":  59, // kVK_Control
 	"shift": 56, // kVK_Shift

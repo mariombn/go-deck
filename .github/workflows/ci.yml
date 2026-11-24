@@ -5,14 +5,13 @@
 #
 # Estrutura em 3 jobs:
 #   - frontend  (ubuntu): locales + tsc + vitest + vite build (tudo OS-agnóstico).
-#   - go        (matrix windows+macos): compila/testa os arquivos por-SO de
+#   - go        (matrix windows+macos+linux): compila/testa os arquivos por-SO de
 #                verdade (SendInput em Go puro no Windows; CGEvent via CGO no
 #                macOS). Builda o frontend antes porque main.go faz
 #                //go:embed all:frontend/dist — sem dist, o pacote raiz não
 #                compila.
-#   - go-quality (ubuntu): gofmt + go test -race nos pacotes internos. Os stubs
-#                _other.go compilam no Linux, então o detector de corrida (mais
-#                confiável no Linux) cobre a lógica OS-agnóstica de graça.
+#   - go-quality (ubuntu): gofmt + go test -race nos pacotes internos, incluindo
+#                input Linux via pipes e protocolo USB via transporte falso.
 name: ci
 
 on:
@@ -43,6 +42,17 @@ jobs:
       - name: Instalar dependências
         run: npm ci
 
+      - name: Validar ícones e scripts de empacotamento
+        working-directory: .
+        run: |
+          python3 scripts/check-icons.py
+          for script in scripts/build-linux.sh scripts/install-linux-packaging-tools.sh scripts/package-linux.sh scripts/check-linux-packages.sh; do
+            bash -n "$script"
+          done
+          for script in build/linux/AppRun build/linux/postinstall.sh build/linux/postremove.sh; do
+            sh -n "$script"
+          done
+
       - name: Paridade dos locales (en base x demais idiomas)
         run: npm run check:locales
 
@@ -61,7 +71,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [windows-latest, macos-latest]
+        os: [windows-latest, macos-latest, ubuntu-22.04]
     steps:
       - uses: actions/checkout@v4
 
@@ -78,6 +88,13 @@ jobs:
           cache: npm
           cache-dependency-path: frontend/package-lock.json
 
+      - name: Dependências nativas Linux
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential pkg-config libgtk-3-dev libwebkit2gtk-4.1-dev
+
       # main.go embute frontend/dist via //go:embed — sem dist o pacote raiz
       # não compila. Buildar o frontend aqui satisfaz o embed para go vet/build/test.
       - name: Build do frontend (para o //go:embed)
@@ -91,6 +108,10 @@ jobs:
 
       - name: Build de produção (embed)
         run: go build ./...
+
+      - name: Build nativo Linux (WebKitGTK 4.1 + runtime de produção)
+        if: runner.os == 'Linux'
+        run: go build -tags production,webkit2_41 ./...
 
       - name: Build da variante dev (reverse-proxy)
         run: go build -tags dev ./...
@@ -120,8 +141,8 @@ jobs:
             exit 1
           fi
 
-      # Os pacotes internos compilam no Linux (stubs _other.go). O detector de
-      # corrida é mais confiável aqui e cobre a lógica OS-agnóstica. Não inclui
+      # Pacotes internos incluem as implementações Linux sem acionar hardware.
+      # O detector de corrida cobre também a lógica OS-agnóstica. Não inclui
       # o pacote raiz (que exigiria o dist), então roda sem buildar o frontend.
       - name: Testes com detector de corrida (pacotes internos)
         run: go test ./internal/... -race -cover

@@ -3,6 +3,11 @@ export namespace action {
 	export class Spec {
 	    type: string;
 	    keys?: string[];
+	    keySequence?: string[][];
+	    mouseOp?: string;
+	    mouseButton?: string;
+	    mouseX?: number;
+	    mouseY?: number;
 	    holdMs?: number;
 	    path?: string;
 	    args?: string[];
@@ -21,6 +26,11 @@ export namespace action {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.type = source["type"];
 	        this.keys = source["keys"];
+	        this.keySequence = source["keySequence"];
+	        this.mouseOp = source["mouseOp"];
+	        this.mouseButton = source["mouseButton"];
+	        this.mouseX = source["mouseX"];
+	        this.mouseY = source["mouseY"];
 	        this.holdMs = source["holdMs"];
 	        this.path = source["path"];
 	        this.args = source["args"];
@@ -97,6 +107,7 @@ export namespace config {
 	    action: action.Spec;
 	    icon?: string;
 	    color?: string;
+	    hideLabel?: boolean;
 	
 	    static createFrom(source: any = {}) {
 	        return new Button(source);
@@ -110,6 +121,7 @@ export namespace config {
 	        this.action = this.convertValues(source["action"], action.Spec);
 	        this.icon = source["icon"];
 	        this.color = source["color"];
+	        this.hideLabel = source["hideLabel"];
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
@@ -310,6 +322,37 @@ export namespace server {
 	        this.port = source["port"];
 	        this.url = source["url"];
 	        this.error = source["error"];
+	    }
+	}
+
+}
+
+export namespace vision2 {
+
+	export class Info {
+	    supported: boolean;
+	    enabled: boolean;
+	    connected: boolean;
+	    path: string;
+	    pageId: string;
+	    revision: number;
+	    error: string;
+	    actionError: string;
+
+	    static createFrom(source: any = {}) {
+	        return new Info(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.supported = source["supported"];
+	        this.enabled = source["enabled"];
+	        this.connected = source["connected"];
+	        this.path = source["path"];
+	        this.pageId = source["pageId"];
+	        this.revision = source["revision"];
+	        this.error = source["error"];
+	        this.actionError = source["actionError"];
 	    }
 	}
 

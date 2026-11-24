@@ -1,35 +1,35 @@
-# Build Directory
+# Arquivos de build
 
-The build directory is used to house all the build files and assets for your application. 
-
-The structure is:
-
-* bin - Output directory
-* darwin - macOS specific files
-* windows - Windows specific files
-
-## Mac
-
-The `darwin` directory holds files specific to Mac builds.
-These may be customised and used as part of the build. To return these files to the default state, simply delete them
-and
-build with `wails build`.
-
-The directory contains the following files:
-
-- `Info.plist` - the main plist file used for Mac builds. It is used when building using `wails build`.
-- `Info.dev.plist` - same as the main plist file but used when building using `wails dev`.
+- `appicon.svg`: fonte vetorial original do ícone.
+- `appicon.png`: ícone 1024×1024 usado pelo Wails (macOS e janela Linux).
+- `icons.sha256`: hashes dos ícones gerados, validados na CI.
+- `bin/`: binários compilados; ignorado pelo Git.
+- `release/`: AppImage, `.deb`, `.rpm` e checksums; ignorado pelo Git.
 
 ## Windows
 
-The `windows` directory contains the manifest and rc files used when building with `wails build`.
-These may be customised for your application. To return these files to the default state, simply delete them and
-build with `wails build`.
+- `windows/icon.ico`: ícone multirresolução embutido no `.exe` pelo Wails.
+- `windows/info.json`: metadados do executável/instalador.
+- `windows/wails.exe.manifest`: manifesto do executável.
+- `windows/installer/`: scripts NSIS.
 
-- `icon.ico` - The icon used for the application. This is used when building using `wails build`. If you wish to
-  use a different icon, simply replace this file with your own. If it is missing, a new `icon.ico` file
-  will be created using the `appicon.png` file in the build directory.
-- `installer/*` - The files used to create the Windows installer. These are used when building using `wails build`.
-- `info.json` - Application details used for Windows builds. The data here will be used by the Windows installer,
-  as well as the application itself (right click the exe -> properties -> details)
-- `wails.exe.manifest` - The main application manifest file.
+## macOS
+
+- `darwin/Info.plist`: metadados do bundle de produção.
+- `darwin/Info.dev.plist`: variante de desenvolvimento.
+
+O Wails converte `appicon.png` para `Contents/Resources/iconfile.icns` ao gerar o `.app`.
+
+## Linux
+
+- `linux/go-deck.desktop` e `linux/icons/`: menu, dock e tema hicolor.
+- `linux/AppRun`: entrada do AppImage; usa GTK3/WebKitGTK 4.1 do sistema.
+- `linux/nfpm.yaml`: conteúdo, dependências e hooks dos pacotes `.deb`/`.rpm`.
+- `linux/70-deckpilot.rules`: permissões locais para Vision 2 e `uinput`.
+- `linux/deckpilot-uinput.conf`: carrega `uinput` no boot.
+- `linux/postinstall.sh` / `postremove.sh`: atualização de regras/caches.
+
+Regenerar ícones: `python3 scripts/generate-icons.py` (Inkscape + ImageMagick 7).
+Validar ícones: `python3 scripts/check-icons.py` (só Python 3).
+
+Build/USB: [docs/linux.md](../docs/linux.md). Empacotamento/release: [docs/releases.md](../docs/releases.md).

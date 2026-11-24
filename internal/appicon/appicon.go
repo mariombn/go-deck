@@ -5,8 +5,8 @@
 // WS/webview e é renderizado sem nenhum caminho especial.
 //
 // Segue o padrão de implementação-por-SO de internal/input e internal/launch:
-// Windows usa Win32 via syscall (sem CGO); macOS usa Cocoa via CGO; demais
-// SOs são stub.
+// Windows usa Win32 via syscall (sem CGO); macOS usa Cocoa via CGO; Linux
+// lê lançadores/temas XDG; demais SOs são stub.
 package appicon
 
 // AppEntry descreve um app instalado e seu ícone (data URL PNG; vazio quando a

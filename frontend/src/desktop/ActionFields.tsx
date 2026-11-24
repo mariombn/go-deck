@@ -1,6 +1,8 @@
 import {Trans, useTranslation} from 'react-i18next';
 import {Action, ActionType, DiscordOp, ObsOp, StepAction} from '../types';
 import KeyCapture from './KeyCapture';
+import Select from '../components/Select';
+import MouseFields from './MouseFields';
 
 // Teto da duração de "apertar e manter", em ms. Espelha o maxHoldMs do backend
 // (internal/action). 0 = toque rápido.
@@ -11,6 +13,7 @@ export const MAX_HOLD_MS = 5000;
 // backend até aceita, mas a UI fica plana — ver CLAUDE.md/kanban).
 export const ACTION_TYPES: {value: ActionType; labelKey: string}[] = [
   {value: 'keypress', labelKey: 'actions.types.keypress'},
+  {value: 'mouse', labelKey: 'actions.types.mouse'},
   {value: 'launch', labelKey: 'actions.types.launch'},
   {value: 'url', labelKey: 'actions.types.url'},
   {value: 'obs', labelKey: 'actions.types.obs'},
@@ -45,6 +48,8 @@ export function emptyAction(type: ActionType): Action {
   switch (type) {
     case 'keypress':
       return {type: 'keypress', keys: [], holdMs: 0};
+    case 'mouse':
+      return {type: 'mouse', mouseOp: 'click', mouseButton: 'left', holdMs: 0};
     case 'launch':
       return {type: 'launch', path: '', args: []};
     case 'url':
@@ -66,7 +71,16 @@ export function isActionValid(a: Action): boolean {
   switch (a.type) {
     case 'keypress': {
       const hold = a.holdMs ?? 0;
-      return a.keys.length > 0 && hold >= 0 && hold <= MAX_HOLD_MS;
+      const sequence = a.keySequence ?? [];
+      return (sequence.length ? (a.keys ?? []).length === 0 && sequence.length <= 64 && sequence.every((keys) => keys.length > 0) : (a.keys ?? []).length > 0) && hold >= 0 && hold <= MAX_HOLD_MS;
+    }
+    case 'mouse': {
+      const hold = a.holdMs ?? 0;
+      if (!Number.isFinite(hold) || hold < 0 || hold > MAX_HOLD_MS) return false;
+      if (a.mouseOp === 'click' || a.mouseOp === 'double_click') return ['left', 'right', 'middle', 'back', 'forward'].includes(a.mouseButton ?? '') && (a.mouseOp !== 'double_click' || hold === 0);
+      const limit = a.mouseOp === 'scroll' ? 100 : 10000;
+      const x = a.mouseX ?? 0, y = a.mouseY ?? 0;
+      return ['move', 'scroll'].includes(a.mouseOp) && hold === 0 && Number.isInteger(x) && Number.isInteger(y) && Math.abs(x) <= limit && Math.abs(y) <= limit && (x !== 0 || y !== 0);
     }
     case 'launch':
       return a.path.trim() !== '';
@@ -109,9 +123,10 @@ export default function ActionFields({value, onChange, allowSequence = true, pag
     <div className="space-y-3">
       <div>
         <label className="mb-1 block text-sm text-slate-400">{t('actions.typeLabel')}</label>
-        <select
+        <Select
+          aria-label={t('actions.typeLabel')}
           value={value.type}
-          onChange={(e) => onChange(emptyAction(e.target.value as ActionType))}
+          onChange={(type) => onChange(emptyAction(type as ActionType))}
           className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 outline-none focus:border-indigo-500"
         >
           {types.map((ty) => (
@@ -119,12 +134,14 @@ export default function ActionFields({value, onChange, allowSequence = true, pag
               {t(ty.labelKey)}
             </option>
           ))}
-        </select>
+        </Select>
       </div>
 
       {value.type === 'keypress' && (
         <div className="space-y-3">
-          <KeyCapture value={value.keys} onChange={(keys) => onChange({...value, keys})} />
+          <KeyCapture value={value.keys ?? []} sequence={value.keySequence}
+            onChange={(keys) => { const {keySequence, ...combo} = value; onChange({...combo, keys}); }}
+            onSequenceChange={(keySequence) => onChange({...value, keys: [], keySequence})} />
           <div>
             <label className="mb-1 block text-sm text-slate-400">
               {t('actions.keypress.holdLabel')} <span className="text-slate-500">{t('actions.keypress.holdHint')}</span>
@@ -149,6 +166,8 @@ export default function ActionFields({value, onChange, allowSequence = true, pag
           </div>
         </div>
       )}
+
+      {value.type === 'mouse' && <MouseFields value={value} onChange={onChange} />}
 
       {value.type === 'launch' && (
         <div className="space-y-3">
@@ -192,9 +211,10 @@ export default function ActionFields({value, onChange, allowSequence = true, pag
         <div className="space-y-3">
           <div>
             <label className="mb-1 block text-sm text-slate-400">{t('actions.obs.opLabel')}</label>
-            <select
+            <Select
+              aria-label={t('actions.obs.opLabel')}
               value={value.obsOp}
-              onChange={(e) => onChange({...value, obsOp: e.target.value as ObsOp})}
+              onChange={(obsOp) => onChange({...value, obsOp: obsOp as ObsOp})}
               className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 outline-none focus:border-indigo-500"
             >
               {OBS_OPS.map((o) => (
@@ -202,7 +222,7 @@ export default function ActionFields({value, onChange, allowSequence = true, pag
                   {t(o.labelKey)}
                 </option>
               ))}
-            </select>
+            </Select>
           </div>
           {obsNeedsTarget(value.obsOp) && (
             <div>
@@ -227,9 +247,10 @@ export default function ActionFields({value, onChange, allowSequence = true, pag
         <div className="space-y-3">
           <div>
             <label className="mb-1 block text-sm text-slate-400">{t('actions.discord.opLabel')}</label>
-            <select
+            <Select
+              aria-label={t('actions.discord.opLabel')}
               value={value.discordOp}
-              onChange={(e) => onChange({...value, discordOp: e.target.value as DiscordOp})}
+              onChange={(discordOp) => onChange({...value, discordOp: discordOp as DiscordOp})}
               className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 outline-none focus:border-indigo-500"
             >
               {DISCORD_OPS.map((o) => (
@@ -237,7 +258,7 @@ export default function ActionFields({value, onChange, allowSequence = true, pag
                   {t(o.labelKey)}
                 </option>
               ))}
-            </select>
+            </Select>
           </div>
           <div>
             <label className="mb-1 block text-sm text-slate-400">{t('actions.discord.keyLabel')}</label>
@@ -252,9 +273,10 @@ export default function ActionFields({value, onChange, allowSequence = true, pag
       {value.type === 'navigate' && (
         <div>
           <label className="mb-1 block text-sm text-slate-400">{t('actions.navigate.label')}</label>
-          <select
+          <Select
+            aria-label={t('actions.navigate.label')}
             value={value.targetPage}
-            onChange={(e) => onChange({type: 'navigate', targetPage: e.target.value})}
+            onChange={(targetPage) => onChange({type: 'navigate', targetPage})}
             className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 outline-none focus:border-indigo-500"
           >
             <option value="">{t('actions.navigate.select')}</option>
@@ -263,7 +285,7 @@ export default function ActionFields({value, onChange, allowSequence = true, pag
                 {p.name}
               </option>
             ))}
-          </select>
+          </Select>
           <p className="mt-2 text-xs text-slate-500">
             {t('actions.navigate.help')}
           </p>

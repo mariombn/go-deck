@@ -3,7 +3,10 @@
 
 // holdMs: se > 0, "apertar e manter" o combo por esses milissegundos antes de
 // soltar (máx. 5000). 0/ausente = toque rápido.
-export type KeypressAction = { type: 'keypress'; keys: string[]; holdMs?: number };
+export type KeypressAction = { type: 'keypress'; keys: string[]; holdMs?: number; keySequence?: string[][] };
+export type MouseOp = 'click' | 'double_click' | 'move' | 'scroll';
+export type MouseButton = 'left' | 'right' | 'middle' | 'back' | 'forward';
+export type MouseAction = { type: 'mouse'; mouseOp: MouseOp; mouseButton?: MouseButton; mouseX?: number; mouseY?: number; holdMs?: number };
 export type LaunchAction = { type: 'launch'; path: string; args?: string[] };
 export type UrlAction = { type: 'url'; url: string };
 
@@ -19,7 +22,7 @@ export type DiscordAction = { type: 'discord'; discordOp: DiscordOp; keys: strin
 
 // Passos de um sequence: qualquer ação que não seja outro sequence (o editor
 // não expõe aninhamento, embora o backend aceite-o vindo do config.json).
-export type StepAction = KeypressAction | LaunchAction | UrlAction | ObsAction | DiscordAction;
+export type StepAction = KeypressAction | MouseAction | LaunchAction | UrlAction | ObsAction | DiscordAction;
 export type SequenceAction = { type: 'sequence'; steps: StepAction[] };
 
 // Navegação entre grids (páginas). É resolvida no cliente: o celular troca a
@@ -43,6 +46,7 @@ export interface ButtonConfig {
   // (distinguidos por "data:" no início). color é a cor de fundo (hex).
   icon?: string;
   color?: string;
+  hideLabel?: boolean;
 }
 
 export interface Grid {

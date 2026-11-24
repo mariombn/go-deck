@@ -100,6 +100,19 @@ describe('DeckButton', () => {
     expect(screen.getByText(/Go to grid/)).toBeInTheDocument();
   });
 
+  it('oculta visualmente o rótulo mas mantém o nome acessível e o ícone grande', () => {
+    render(<DeckButton button={botao({label: 'Organização', hideLabel: true, icon: '🎵'})} mode="mobile" />);
+    expect(screen.queryByText('Organização')).toBeNull();
+    expect(screen.getByRole('button', {name: 'Organização'})).toBeInTheDocument();
+    expect(screen.getByText('🎵')).toHaveClass('text-6xl');
+  });
+
+  it('limita rótulos sem espaços ao tamanho da célula', () => {
+    render(<DeckButton button={botao({label: 'x'.repeat(500)})} mode="mobile" />);
+    expect(screen.getByRole('button')).toHaveClass('min-w-0', 'w-full', 'overflow-hidden');
+    expect(screen.getByText('x'.repeat(500))).toHaveClass('max-w-full', 'break-all', 'line-clamp-2');
+  });
+
   describe('estados vazios / sem ícone', () => {
     it('botão sem rótulo nem ícone mostra o placeholder "(no name)" no mobile', () => {
       render(<DeckButton button={botao({label: '', icon: undefined})} mode="mobile" />);

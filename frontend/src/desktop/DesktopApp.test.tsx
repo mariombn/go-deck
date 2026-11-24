@@ -11,6 +11,7 @@ import userEvent from '@testing-library/user-event';
 import '../lib/i18n';
 import DesktopApp from './DesktopApp';
 import {DeckConfig} from '../types';
+import {chooseSelect} from '../test/select';
 
 // --- Mocks dos bindings Wails (mesmo caminho relativo dos componentes desktop) ---
 const getConfig = vi.fn();
@@ -25,6 +26,7 @@ const testOBS = vi.fn(async (..._a: unknown[]) => undefined);
 
 vi.mock('../../wailsjs/go/main/App', () => ({
   GetConfig: (...a: unknown[]) => getConfig(...a),
+  GetHardwareInfo: async () => ({supported: false}),
   SaveConfig: (...a: unknown[]) => saveConfig(...a),
   GetNetworkInfo: (...a: unknown[]) => getNetworkInfo(...a),
   GetQRCode: (...a: unknown[]) => getQRCode(...a),
@@ -190,7 +192,7 @@ describe('DesktopApp — config drawer e idioma', () => {
     await renderLoaded();
     fireEvent.click(screen.getByLabelText('Settings'));
     const langSelect = await screen.findByLabelText('Language');
-    fireEvent.change(langSelect, {target: {value: 'pt-BR'}});
+    chooseSelect(langSelect, 'pt-BR');
     await waitFor(() => expect(setLanguage).toHaveBeenCalledWith('pt-BR'));
   });
 

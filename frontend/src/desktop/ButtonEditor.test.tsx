@@ -94,6 +94,16 @@ describe('ButtonEditor — composição e salvar', () => {
     expect(saved.color).toBe('#dc2626');
   });
 
+  it('mantém rótulo organizacional ao ocultar o texto e limita a prévia', () => {
+    const {onSave} = setup({draft: baseDraft({label: 'Nome'.repeat(100), icon: '🎵'})});
+    fireEvent.click(screen.getByLabelText('Hide button label (keep name for organization)'));
+    const preview = screen.getByTestId('appearance-preview');
+    expect(preview).toHaveClass('shrink-0', 'overflow-hidden');
+    expect(preview.textContent).not.toContain('Nome');
+    fireEvent.click(screen.getByText('Save button'));
+    expect(onSave.mock.calls[0][0]).toMatchObject({label: 'Nome'.repeat(100), hideLabel: true});
+  });
+
   it('icon/color vazios viram undefined no save', () => {
     const {onSave} = setup({draft: baseDraft({label: 'X', icon: '', color: ''})});
     fireEvent.click(screen.getByText('Save button'));

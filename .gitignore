@@ -1,5 +1,6 @@
 # Wails / Go build output
 build/bin/
+build/release/
 *.exe
 *.exe~
 *.dll

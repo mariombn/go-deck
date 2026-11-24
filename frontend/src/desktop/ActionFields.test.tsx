@@ -12,6 +12,7 @@ import userEvent from '@testing-library/user-event';
 import '../lib/i18n';
 import ActionFields, {emptyAction, isActionValid} from './ActionFields';
 import {Action} from '../types';
+import {chooseSelect, selectOptions} from '../test/select';
 
 // Stub do KeyCapture: um botão que injeta um combo fixo e mostra o valor atual.
 // Mantém o ActionFields desacoplado da captura real de teclado. Usamos
@@ -44,25 +45,25 @@ function setup(initial: Action, extra: Partial<React.ComponentProps<typeof Actio
 }
 
 describe('ActionFields — seletor de tipo', () => {
-  it('lista todos os 7 tipos quando allowSequence é true (default)', () => {
+  it('lista todos os 8 tipos quando allowSequence é true (default)', () => {
     setup(emptyAction('keypress'));
     const select = screen.getByRole('combobox') as HTMLSelectElement;
-    const valores = Array.from(select.options).map((o) => o.value);
-    expect(valores).toEqual(['keypress', 'launch', 'url', 'obs', 'discord', 'navigate', 'sequence']);
+    const valores = selectOptions(select).map((option) => option.getAttribute('data-value'));
+    expect(valores).toEqual(['keypress', 'mouse', 'launch', 'url', 'obs', 'discord', 'navigate', 'sequence']);
   });
 
   it('omite sequence e navigate quando allowSequence é false (passo de sequência)', () => {
     setup(emptyAction('keypress'), {allowSequence: false});
     const select = screen.getByRole('combobox') as HTMLSelectElement;
-    const valores = Array.from(select.options).map((o) => o.value);
+    const valores = selectOptions(select).map((option) => option.getAttribute('data-value'));
     expect(valores).not.toContain('sequence');
     expect(valores).not.toContain('navigate');
-    expect(valores).toEqual(['keypress', 'launch', 'url', 'obs', 'discord']);
+    expect(valores).toEqual(['keypress', 'mouse', 'launch', 'url', 'obs', 'discord']);
   });
 
   it('trocar o tipo emite uma ação em branco do novo tipo', async () => {
     const {onChange} = setup(emptyAction('keypress'));
-    fireEvent.change(screen.getByRole('combobox'), {target: {value: 'url'}});
+    chooseSelect(screen.getByRole('combobox'), 'url');
     expect(onChange).toHaveBeenCalledWith({type: 'url', url: ''});
   });
 });
@@ -85,6 +86,17 @@ describe('ActionFields — campos por tipo', () => {
     const {onChange} = setup({type: 'keypress', keys: ['a'], holdMs: 0});
     fireEvent.change(screen.getByRole('spinbutton'), {target: {value: '99'}});
     expect(onChange).toHaveBeenLastCalledWith({type: 'keypress', keys: ['a'], holdMs: 5000});
+  });
+
+  it('mouse: seleciona botão e edita rolagem com direção negativa', () => {
+    const {onChange, rerenderWith} = setup(emptyAction('mouse'));
+    chooseSelect(screen.getByRole('combobox', {name: 'Mouse button'}), 'right');
+    expect(onChange).toHaveBeenLastCalledWith({type: 'mouse', mouseOp: 'click', mouseButton: 'right', holdMs: 0});
+    chooseSelect(screen.getByRole('combobox', {name: 'Mouse operation'}), 'scroll');
+    expect(onChange).toHaveBeenLastCalledWith({type: 'mouse', mouseOp: 'scroll', mouseX: 0, mouseY: 1});
+    rerenderWith({type: 'mouse', mouseOp: 'scroll', mouseX: 0, mouseY: 1});
+    fireEvent.change(screen.getByRole('spinbutton', {name: 'Vertical (Y)'}), {target: {value: '-3'}});
+    expect(onChange).toHaveBeenLastCalledWith({type: 'mouse', mouseOp: 'scroll', mouseX: 0, mouseY: -3});
   });
 
   it('launch: edita path e converte o textarea de args em array (uma linha por arg)', () => {
@@ -121,7 +133,7 @@ describe('ActionFields — campos por tipo', () => {
     // Há 2 comboboxes: [0] = tipo da ação, [1] = operação OBS.
     rerenderWith({type: 'obs', obsOp: 'scene', target: 'Cena 1'});
     const opSelect = screen.getAllByRole('combobox')[1];
-    fireEvent.change(opSelect, {target: {value: 'toggle_record'}});
+    chooseSelect(opSelect, 'toggle_record');
     expect(onChange).toHaveBeenLastCalledWith({type: 'obs', obsOp: 'toggle_record', target: 'Cena 1'});
   });
 
@@ -146,9 +158,9 @@ describe('ActionFields — campos por tipo', () => {
     // Há 2 comboboxes: [0] = tipo da ação, [1] = página alvo.
     const select = screen.getAllByRole('combobox')[1] as HTMLSelectElement;
     // Opção placeholder + 2 páginas.
-    expect(Array.from(select.options).map((o) => o.value)).toEqual(['', 'p1', 'p2']);
+    expect(selectOptions(select).map((option) => option.getAttribute('data-value'))).toEqual(['', 'p1', 'p2']);
     expect(screen.getByText('Cenas')).toBeInTheDocument();
-    fireEvent.change(select, {target: {value: 'p2'}});
+    chooseSelect(select, 'p2');
     expect(onChange).toHaveBeenLastCalledWith({type: 'navigate', targetPage: 'p2'});
   });
 
@@ -194,7 +206,7 @@ describe('ActionFields — campos por tipo', () => {
     const stepCombos = combos.slice(1);
     expect(stepCombos.length).toBeGreaterThan(0);
     for (const c of stepCombos) {
-      const valores = Array.from(c.options).map((o) => o.value);
+      const valores = selectOptions(c).map((option) => option.getAttribute('data-value'));
       expect(valores).not.toContain('sequence');
     }
   });
@@ -204,11 +216,24 @@ describe('emptyAction / isActionValid', () => {
   it('emptyAction devolve a forma certa por tipo', () => {
     expect(emptyAction('keypress')).toEqual({type: 'keypress', keys: [], holdMs: 0});
     expect(emptyAction('launch')).toEqual({type: 'launch', path: '', args: []});
+    expect(emptyAction('mouse')).toEqual({type: 'mouse', mouseOp: 'click', mouseButton: 'left', holdMs: 0});
     expect(emptyAction('url')).toEqual({type: 'url', url: ''});
     expect(emptyAction('obs')).toEqual({type: 'obs', obsOp: 'scene', target: ''});
     expect(emptyAction('discord')).toEqual({type: 'discord', discordOp: 'mute', keys: []});
     expect(emptyAction('navigate')).toEqual({type: 'navigate', targetPage: ''});
     expect(emptyAction('sequence')).toEqual({type: 'sequence', steps: []});
+  });
+
+  it('valida sequências de teclado e limites de mouse', () => {
+    expect(isActionValid({type: 'keypress', keys: [], keySequence: [['a'], ['a']]})).toBe(true);
+    expect(isActionValid({type: 'keypress', keys: [], keySequence: [[]]})).toBe(false);
+    expect(isActionValid({type: 'keypress', keys: ['a'], keySequence: [['b']]})).toBe(false);
+    expect(isActionValid({type: 'mouse', mouseOp: 'click', mouseButton: 'left'})).toBe(true);
+    expect(isActionValid({type: 'mouse', mouseOp: 'double_click', mouseButton: 'left', holdMs: 10})).toBe(false);
+    expect(isActionValid({type: 'mouse', mouseOp: 'move', mouseX: 0, mouseY: 0})).toBe(false);
+    expect(isActionValid({type: 'mouse', mouseOp: 'scroll', mouseY: -100})).toBe(true);
+    expect(isActionValid({type: 'mouse', mouseOp: 'scroll', mouseY: 101})).toBe(false);
+    expect(isActionValid({type: 'mouse', mouseOp: 'move', mouseX: 1.5})).toBe(false);
   });
 
   it('isActionValid espelha as regras do backend', () => {

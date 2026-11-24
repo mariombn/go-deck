@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>io.github.mariombn.go-deck</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>MIT</project_license>
+  <name>go-deck</name>
+  <summary>Control your computer with a phone or USB macro deck</summary>
+  <summary xml:lang="pt-BR">Controle o computador pelo celular ou por um deck USB</summary>
+  <description>
+    <p>A desktop editor for macro grids, keyboard shortcuts, OBS controls and USB decks.</p>
+    <p xml:lang="pt-BR">Editor desktop de grids de macros, atalhos de teclado, controles do OBS e decks USB.</p>
+  </description>
+  <launchable type="desktop-id">go-deck.desktop</launchable>
+  <url type="homepage">https://github.com/mariombn/go-deck</url>
+  <url type="bugtracker">https://github.com/mariombn/go-deck/issues</url>
+  <provides><binary>go-deck</binary></provides>
+  <content_rating type="oars-1.1"/>
+</component>
