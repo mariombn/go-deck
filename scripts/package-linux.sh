@@ -13,7 +13,7 @@ if [[ $(uname -m) != x86_64 ]]; then
   echo 'Os pacotes Linux de release são, por enquanto, x86_64/amd64.' >&2
   exit 1
 fi
-for tool in nfpm appimagetool desktop-file-validate readelf; do
+for tool in nfpm appimagetool desktop-file-validate readelf file; do
   command -v "$tool" >/dev/null || { echo "Ferramenta ausente: $tool (ver docs/releases.md)" >&2; exit 1; }
 done
 if [[ ! -x build/bin/go-deck ]]; then

@@ -85,7 +85,7 @@ No AppImage as regras USB estão disponíveis para extração, mas não são ins
 Em Ubuntu 22.04, além das dependências de compilação de `docs/linux.md`:
 
 ```bash
-sudo apt install desktop-file-utils rpm cpio
+sudo apt install desktop-file-utils rpm file libarchive-tools
 bash scripts/install-linux-packaging-tools.sh
 export PATH="$HOME/.cache/go-deck/packaging:$(go env GOPATH)/bin:$PATH"
 wails build -tags webkit2_41
@@ -93,7 +93,7 @@ bash scripts/package-linux.sh 1.2.3
 bash scripts/check-linux-packages.sh 1.2.3
 ```
 
-O verificador também exige `dpkg-deb` (normalmente já instalado no Debian/Ubuntu). Em Fedora/Nobara, instale `desktop-file-utils`, `rpm`, `cpio` e `dpkg`. `PACKAGING_TOOLS_DIR` permite mudar o diretório das ferramentas; `APPIMAGE_RUNTIME_FILE` permite indicar um runtime local. O empacotador rejeita binários de outra arquitetura ou compilados contra WebKitGTK 4.0.
+O verificador também exige `dpkg-deb` (normalmente já instalado no Debian/Ubuntu). Em Fedora/Nobara, instale `desktop-file-utils`, `rpm`, `file`, `bsdtar` (libarchive) e `dpkg`. `PACKAGING_TOOLS_DIR` permite mudar o diretório das ferramentas; `APPIMAGE_RUNTIME_FILE` permite indicar um runtime local. O empacotador rejeita binários de outra arquitetura ou compilados contra WebKitGTK 4.0.
 
 Saída em `build/release/` (ignorada pelo Git):
 

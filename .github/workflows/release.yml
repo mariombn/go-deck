@@ -70,7 +70,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
             build-essential pkg-config libgtk-3-dev libwebkit2gtk-4.1-dev \
-            desktop-file-utils rpm cpio
+            desktop-file-utils rpm file libarchive-tools
 
       - name: Instalar a CLI do Wails (mesma versão do go.mod)
         run: go install github.com/wailsapp/wails/v2/cmd/wails@v2.12.0
@@ -104,8 +104,17 @@ jobs:
         env:
           VERSION: ${{ steps.version.outputs.value }}
         run: |
-          bash scripts/package-linux.sh "$VERSION"
-          bash scripts/check-linux-packages.sh "$VERSION"
+          set -o pipefail
+          log="$RUNNER_TEMP/go-deck-packaging.log"
+          if ! (bash scripts/package-linux.sh "$VERSION" && bash scripts/check-linux-packages.sh "$VERSION") 2>&1 | tee "$log"; then
+            # Expõe um resumo útil nas annotations, sem exigir download dos logs.
+            detail="$(tail -n 30 "$log")"
+            detail="${detail//'%'/'%25'}"
+            detail="${detail//$'\r'/'%0D'}"
+            detail="${detail//$'\n'/'%0A'}"
+            echo "::error title=Falha no empacotamento Linux::$detail"
+            exit 1
+          fi
 
       - name: Guardar pacotes validados
         uses: actions/upload-artifact@v4

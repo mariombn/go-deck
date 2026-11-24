@@ -7,7 +7,7 @@ version="${1:?Uso: bash scripts/check-linux-packages.sh 1.2.3}"
 version="${version#v}"
 name="go-deck_${version}_linux_amd64"
 out="$(realpath build/release)"
-for tool in dpkg-deb rpm rpm2cpio cpio desktop-file-validate; do
+for tool in dpkg-deb rpm bsdtar desktop-file-validate; do
   command -v "$tool" >/dev/null || { echo "Ferramenta ausente: $tool" >&2; exit 1; }
 done
 (cd "$out" && sha256sum --check "$name.sha256")
@@ -17,7 +17,9 @@ dpkg-deb --extract "$out/$name.deb" "$work/deb"
 dpkg-deb --control "$out/$name.deb" "$work/deb-control"
 test "$(dpkg-deb --field "$out/$name.deb" Architecture)" = amd64
 mkdir -p "$work/rpm" "$work/appimage"
-(rpm2cpio "$out/$name.rpm" | (cd "$work/rpm" && cpio -idm --quiet))
+# libarchive extrai RPM diretamente e remove caminhos absolutos. Evita as
+# diferenças de rpm2cpio/cpio entre versões (e qualquer escrita em /usr).
+bsdtar --extract --file "$out/$name.rpm" --directory "$work/rpm" --no-same-owner --no-same-permissions
 test "$(rpm -qp --qf '%{ARCH}' "$out/$name.rpm")" = x86_64
 (cd "$work/appimage" && "$out/$name.AppImage" --appimage-extract > /dev/null)
 appdir="$work/appimage/squashfs-root"
