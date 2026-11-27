@@ -39,13 +39,19 @@ Sem hardware extra. Seu celular vira o deck.
    ainda não é assinado). Clique em **Mais informações → Executar assim mesmo**.
 3. Uma janela com o editor e o QR Code vai abrir.
 
-### Linux e Rise Mode Vision 2
+### Linux
 
 Baixe **AppImage**, **`.deb`** ou **`.rpm`** (x86_64) nos releases. Os pacotes
 nativos instalam lançador, ícones e regras USB; o AppImage usa GTK3/WebKitGTK 4.1
 do sistema. Veja [instalação e formatos](docs/releases.md) e
 [permissões/uso do hardware](docs/linux.md).
 Para compilar, o binário é `build/bin/go-deck`; atalhos funcionam em Wayland e X11.
+
+### Rise Mode Vision 2
+
+O app desktop controla o Vision 2 por USB no Windows, macOS e Linux. Feche
+outros controladores do Vision 2 antes de ativar **Controlar USB**. Veja
+[como conectar e testar o hardware](docs/vision2.md).
 
 ### macOS
 
@@ -183,8 +189,9 @@ Pré-requisitos:
 - **Go 1.23+**
 - **Node.js LTS**
 - **Wails CLI v2:** `go install github.com/wailsapp/wails/v2/cmd/wails@latest`
-- **Windows:** WebView2 runtime (já vem no Windows 11); sem CGO (teclado via `SendInput` em Go puro)
-- **macOS:** Xcode Command Line Tools (`xcode-select --install`); CGO é necessário para a simulação de teclado via `CGEvent`
+- **Windows:** WebView2 runtime (já vem no Windows 11). Para compilar com suporte ao
+  Vision 2, instale o GCC do MinGW-w64 e defina `$env:CGO_ENABLED = '1'` no PowerShell.
+- **macOS:** Xcode Command Line Tools (`xcode-select --install`) para simular teclado e acessar o Vision 2 por USB.
 - **Linux:** GTK3/WebKitGTK e compilador C; veja [docs/linux.md](docs/linux.md).
 
 Rodar em desenvolvimento (hot-reload):

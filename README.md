@@ -39,13 +39,19 @@ No extra hardware. Your phone becomes the deck.
    app isn't code-signed yet). Click **More info → Run anyway**.
 3. A window with the editor and the QR Code will open.
 
-### Linux / Rise Mode Vision 2
+### Linux
 
 Releases include **AppImage**, **`.deb`** and **`.rpm`** for x86_64. Native
 packages install a launcher, icons and USB rules. AppImage requires system
 GTK3/WebKitGTK 4.1. See [packages](docs/releases.md) and
 [build/USB setup](docs/linux.md) (pt-BR). The compiled binary is
 `build/bin/go-deck`; shortcuts work on Wayland and X11.
+
+### Rise Mode Vision 2
+
+The desktop app can control the Vision 2 over USB on Windows, macOS and Linux.
+Close other Vision 2 controllers before enabling **Control USB**. See
+[hardware setup and testing](docs/vision2.md) (pt-BR).
 
 ### macOS
 
@@ -183,8 +189,9 @@ Prerequisites:
 - **Go 1.23+**
 - **Node.js LTS**
 - **Wails CLI v2:** `go install github.com/wailsapp/wails/v2/cmd/wails@latest`
-- **Windows:** WebView2 runtime (already on Windows 11); no CGO (keyboard via `SendInput` in pure Go)
-- **macOS:** Xcode Command Line Tools (`xcode-select --install`); CGO is required for keyboard simulation via `CGEvent`
+- **Windows:** WebView2 runtime (already on Windows 11). For Vision 2 support,
+  install MinGW-w64 GCC and set `$env:CGO_ENABLED = '1'` before building in PowerShell.
+- **macOS:** Xcode Command Line Tools (`xcode-select --install`) for keyboard simulation and Vision 2 USB support.
 
 Run in development (hot-reload):
 

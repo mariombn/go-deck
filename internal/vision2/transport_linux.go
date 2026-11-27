@@ -14,8 +14,6 @@ import (
 
 const supported = true
 
-type candidate struct{ path, identity string }
-
 func findDevices() ([]candidate, error) {
 	entries, err := os.ReadDir("/sys/class/hidraw")
 	if os.IsNotExist(err) {

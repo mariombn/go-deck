@@ -62,28 +62,10 @@ Reconecte o USB e, se necessário, encerre e reabra sua sessão. As regras usam 
 
 ## Rise Mode Vision 2
 
-O suporte **ao hardware é Linux-only** nesta versão. Não é necessário instalar/rodar OpenDeck, seu plugin, Node.js ou ImageMagick para usar o binário compilado.
-
-- USB `0a00:1002`, interface HID `00`, acesso direto a `hidraw` em Go, sem libusb/CGO.
-- 15 teclas: 3 linhas × 5 colunas, posição 1 no canto superior esquerdo.
-- LCDs JPEG 112×112, com cores, rótulos, emoji e imagens rasterizadas pelo canvas do desktop. O JPEG é girado 180° e os slots LCD têm as linhas invertidas, conforme o plugin local.
-- Heartbeat a cada 4 s, detecção/reconexão a cada 2 s e reinicialização após suspensão.
-- Somente uma ação por key-down (reports repetidos e key-up não executam novamente).
-- Ações usam o mesmo executor dos toques do celular. `navigate` muda somente a página do hardware, sem executar no servidor.
-- Página inicial = primeira página salva. O painel **Rise Mode Vision 2** permite escolher outra página ou voltar ao início. Para voltar pelo próprio aparelho, crie uma ação de navegação para a primeira página.
-- Grids maiores não são redimensionados: apenas as primeiras 3 linhas × 5 colunas aparecem. O painel avisa sobre o recorte.
-- Apenas configurações **salvas** vão para o hardware; rascunhos do editor não alteram as teclas. Navegação USB e navegação no celular são independentes.
-- Brilho inicial: 80%. A configuração do brilho e do estado ligado/desligado ainda não é persistida.
-
-**Mantenha o OpenDeck fechado.** O lock USB evita duas instâncias cooperantes do DeckPilot, mas não bloqueia programas que ignoram `flock`. Desmarque **Controlar USB** (ou feche o app) antes de abrir outro controlador. O estado “Aguardando USB” é normal sem o aparelho; falhas de permissão e de execução aparecem no painel.
-
-### Teste manual
-
-1. Abra o app, confira “Conectado” e crie/salve botões com rótulo, cor, emoji e uma imagem.
-2. Confira a orientação e os quatro cantos do grid: superior esquerdo, superior direito, inferior esquerdo e inferior direito.
-3. Configure um atalho fácil de observar (por exemplo, mídia) e confira que cada toque dispara uma única vez.
-4. Crie uma segunda página com navegação de ida e volta. Confira que o celular não muda de página junto.
-5. Edite/salve um botão, desconecte/reconecte o USB e teste a recuperação. Teste também liberar/reativar “Controlar USB”.
+No Linux, o Go Deck abre o USB `0a00:1002` na interface HID `00` via `hidraw`.
+O `flock` impede duas instâncias cooperantes do Go Deck de usarem a mesma
+interface. Feche outros controladores antes de ativar **Controlar USB**.
+Consulte o [guia do Vision 2](vision2.md) para uso e teste do aparelho.
 
 ### Testes automatizados
 
@@ -95,13 +77,11 @@ cd frontend && npm ci && npm test -- --threads=false && npm run build
 
 Por padrão os testes **não acessam o hardware nem enviam teclas**. Os testes de protocolo usam transporte falso e os de input usam um pipe.
 
-Diagnósticos opcionais, com o app e OpenDeck fechados:
+Diagnóstico opcional, com o app fechado:
 
 ```bash
 # Cria e destrói o teclado virtual, SEM digitar.
 DECKPILOT_TEST_UINPUT=1 go test -v ./internal/input -run HardwareSmoke
-# Inicializa o USB e grava uma imagem de teste nos 15 LCDs.
-DECKPILOT_TEST_VISION2=1 go test -v ./internal/vision2 -run HardwareSmoke
 ```
 
 ### Origem do protocolo
