@@ -55,7 +55,7 @@ arquivos de `/usr/share` com uma versão antiga.
 | Runner | Artefatos |
 | --- | --- |
 | Windows | `go-deck.exe` |
-| macOS | `go-deck-macos.zip` (contém `.app`) |
+| macOS | `go-deck-macos.dmg` (contém `go-deck.app` e um atalho para Aplicativos) |
 | Ubuntu 22.04 / amd64 | AppImage, `.deb`, `.rpm` e SHA-256 |
 
 - **Push de tag `v*`:** compila todas as plataformas, valida os pacotes, reúne os artifacts e só então cria/publica o release. As notas completas devem estar em `docs/release-notes/<tag>.md`.
@@ -65,6 +65,7 @@ arquivos de `/usr/share` com uma versão antiga.
 - `scripts/set-build-version.mjs` sincroniza os metadados numéricos Windows/macOS no runner; o arquivo do repositório não precisa ser alterado para cada release.
 - O job final tem permissão de escrita e usa somente o `GITHUB_TOKEN`; não exige PAT pessoal nem dispara outra execução recursiva de release. `SHA256SUMS` cobre os binários/pacotes de todas as plataformas.
 - Wails é fixado em **v2.12.0**, a mesma versão do `go.mod`.
+- No macOS, o runner cria e verifica a imagem de disco com `hdiutil`.
 - Linux compila com **`webkit2_41`**. Usa Ubuntu 22.04 como base glibc 2.35 e publica, nesta etapa, somente **amd64/x86_64**.
 - O `.deb` e o `.rpm` são gerados pelo **nFPM v2.41.3**; AppImage usa **appimagetool 1.9.1** e runtime **20251108**, ambos com download validado por SHA-256. Não usa `continuous` nem FUSE durante o build.
 - Os três formatos contêm exatamente o mesmo binário. Antes do upload, a pipeline extrai os três sem instalá-los e confere binário, ícones, lançador, regras USB, scripts e dependências.
