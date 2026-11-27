@@ -51,8 +51,8 @@ Para compilar, o binário é `build/bin/go-deck`; atalhos funcionam em Wayland e
 
 1. Abra o `go-deck-macos.dmg` e arraste `go-deck.app` para Aplicativos. Nas versões
    até a `v0.2`, extraia o `go-deck-macos.zip` primeiro.
-2. Na primeira vez, **clique com o botão direito no app → Abrir** (ele ainda não é
-   notarizado, então o duplo-clique normal é bloqueado pelo Gatekeeper).
+2. Abra o app em Aplicativos. Se o macOS bloquear a abertura porque o app ainda
+   não é notarizado, siga [as instruções da Apple](https://support.apple.com/pt-br/102445).
 3. O app vai pedir permissão de **Acessibilidade** (necessária para simular o
    teclado). Aprove em *Ajustes do Sistema → Privacidade e Segurança → Acessibilidade*.
 

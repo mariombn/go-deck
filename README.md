@@ -51,8 +51,8 @@ GTK3/WebKitGTK 4.1. See [packages](docs/releases.md) and
 
 1. Open `go-deck-macos.dmg` and drag `go-deck.app` into Applications. For releases
    through `v0.2`, extract `go-deck-macos.zip` first.
-2. The first time, **right-click the app → Open** (it isn't notarized yet, so a
-   normal double-click is blocked by Gatekeeper).
+2. Open the app from Applications. If macOS blocks it because it isn't notarized,
+   follow [Apple's instructions for opening the app](https://support.apple.com/en-us/102445).
 3. The app will ask for **Accessibility** permission (required to simulate the
    keyboard). Approve it in *System Settings → Privacy & Security → Accessibility*.
 
