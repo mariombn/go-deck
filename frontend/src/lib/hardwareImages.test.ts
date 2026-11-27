@@ -1,5 +1,6 @@
 import {beforeEach, afterEach, it, expect, vi} from 'vitest';
 import {hardwareButtonImage, hardwareImages} from './hardwareImages';
+import {EMOJI_FONT_FAMILY} from './emoji';
 import {ButtonConfig, DeckConfig} from '../types';
 
 const ctx = {
@@ -30,7 +31,7 @@ it('oculta rótulo no LCD e centraliza emoji em tamanho maior', async () => {
   await hardwareButtonImage({...button, hideLabel: true});
   expect(ctx.fillText).toHaveBeenCalledTimes(1);
   expect(ctx.fillText).toHaveBeenCalledWith('🎵', 56, 56, 100);
-  expect(ctx.font).toBe('76px sans-serif');
+  expect(ctx.font).toBe(`76px ${EMOJI_FONT_FAMILY}`);
 });
 
 it('limita rótulos longos e mostra reticências', async () => {

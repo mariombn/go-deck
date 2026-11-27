@@ -1,14 +1,13 @@
 // Testes de comportamento do AppearanceFields: cor de fundo, abas de ícone
 // (none/emoji/image/app), upload de imagem e galeria de apps do SO. Em pt-BR.
 //
-// i18n real (en) por '../lib/i18n'. Mockamos:
-//  - emoji-picker-react: stub leve que dispara onEmojiClick com um emoji fixo.
+// i18n real por '../lib/i18n'. Mockamos:
 //  - '../lib/appearance': mantemos isImageIcon real, mas trocamos
 //    resizeImageToDataURL por um vi.fn() determinístico (evita canvas/FileReader).
 //  - bindings Wails: ListInstalledApps / PickAppIcon.
 
-import {render, screen, fireEvent, waitFor} from '@testing-library/react';
-import '../lib/i18n';
+import {act, render, screen, fireEvent, waitFor} from '@testing-library/react';
+import i18n from '../lib/i18n';
 import AppearanceFields from './AppearanceFields';
 
 const resizeMock = vi.fn(async (_f: File) => 'data:image/png;base64,RESIZED');
@@ -17,15 +16,6 @@ vi.mock('../lib/appearance', async () => {
   const real = await vi.importActual<typeof import('../lib/appearance')>('../lib/appearance');
   return {...real, resizeImageToDataURL: (f: File) => resizeMock(f)};
 });
-
-vi.mock('emoji-picker-react', () => ({
-  EmojiStyle: {NATIVE: 'native'},
-  default: ({onEmojiClick}: {onEmojiClick: (e: {emoji: string}) => void}) => (
-    <button type="button" onClick={() => onEmojiClick({emoji: '😀'})}>
-      pick-emoji
-    </button>
-  ),
-}));
 
 const listApps = vi.fn();
 const pickAppIcon = vi.fn();
@@ -83,14 +73,50 @@ describe('AppearanceFields — abas de ícone', () => {
     expect(botao.textContent).toContain('🔥');
   });
 
-  it('escolher emoji no picker emite o caractere e fecha o overlay', () => {
-    const {onChange} = setup({icon: '🔥'});
-    fireEvent.click(screen.getByText('Choose emoji')); // abre overlay
-    fireEvent.click(screen.getByText('pick-emoji'));
-    expect(onChange).toHaveBeenLastCalledWith({icon: '😀'});
-    // Overlay fechou: o picker stub some.
-    expect(screen.queryByText('pick-emoji')).toBeNull();
-  });
+  it('busca e seleciona um emoji Unicode no seletor em português sem acessar a rede', async () => {
+    await import('./EmojiPicker');
+    // O jsdom não implementa os observers usados para posicionar a grade.
+    class Observer {
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    }
+    const fetch = vi.fn();
+    vi.stubGlobal('IntersectionObserver', Observer);
+    vi.stubGlobal('ResizeObserver', Observer);
+    vi.stubGlobal('fetch', fetch);
+
+    try {
+      await i18n.changeLanguage('pt-BR');
+      const {container, onChange} = setup({icon: '🔥'});
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', {name: /Escolher emoji/}));
+      });
+
+      const search = await waitFor(() => {
+        const picker = container.querySelector('em-emoji-picker');
+        const input = picker?.shadowRoot?.querySelector<HTMLInputElement>('input[type="search"]');
+        expect(input).toHaveAttribute('placeholder', 'Procurar');
+        return input!;
+      });
+      fireEvent.input(search, {target: {value: 'red heart'}});
+
+      const picker = search.getRootNode() as ShadowRoot;
+      const heart = await waitFor(() => {
+        const result = picker.querySelector('button[aria-label="❤️"]');
+        expect(result).toBeInTheDocument();
+        return result!;
+      });
+      fireEvent.click(heart);
+
+      expect(onChange).toHaveBeenLastCalledWith({icon: '❤️'});
+      expect(container.querySelector('em-emoji-picker')).toBeNull();
+      expect(fetch).not.toHaveBeenCalled();
+    } finally {
+      vi.unstubAllGlobals();
+      await act(async () => { await i18n.changeLanguage('en'); });
+    }
+  }, 10000);
 
   it('trocar para a aba emoji (vindo de none) limpa o ícone', () => {
     const {onChange} = setup();

@@ -1,8 +1,10 @@
-import {useEffect, useState} from 'react';
+import {lazy, Suspense, useEffect, useState} from 'react';
 import {useTranslation} from 'react-i18next';
-import EmojiPicker, {EmojiStyle} from 'emoji-picker-react';
 import {isImageIcon, resizeImageToDataURL} from '../lib/appearance';
+import {EMOJI_FONT_FAMILY} from '../lib/emoji';
 import * as App from '../../wailsjs/go/main/App';
+
+const EmojiPicker = lazy(() => import('./EmojiPicker'));
 
 interface Props {
   icon: string | undefined;
@@ -145,7 +147,9 @@ export default function AppearanceFields({icon, color, onChange}: Props) {
               onClick={() => setPickerOpen(true)}
               className="flex items-center gap-2 rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm hover:border-indigo-500"
             >
-              <span className="text-xl leading-none">{!isImageIcon(icon) && icon ? icon : '🙂'}</span>
+              <span className="text-xl leading-none" style={{fontFamily: EMOJI_FONT_FAMILY}}>
+                {!isImageIcon(icon) && icon ? icon : '🙂'}
+              </span>
               {t('appearance.chooseEmoji')}
             </button>
             {pickerOpen && (
@@ -164,15 +168,12 @@ export default function AppearanceFields({icon, color, onChange}: Props) {
                   >
                     ✕
                   </button>
-                  <EmojiPicker
-                    emojiStyle={EmojiStyle.NATIVE}
-                    onEmojiClick={(e) => {
-                      onChange({icon: e.emoji});
+                  <Suspense fallback={<p className="rounded-lg bg-slate-900 p-4 text-sm">{t('common.loading')}</p>}>
+                    <EmojiPicker onSelect={(emoji) => {
+                      onChange({icon: emoji});
                       setPickerOpen(false);
-                    }}
-                    width={320}
-                    height={420}
-                  />
+                    }} />
+                  </Suspense>
                 </div>
               </div>
             )}

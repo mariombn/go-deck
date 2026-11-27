@@ -84,7 +84,7 @@ kanban-plugin: board
 - [x] Aparência dos botões: emoji, imagem e cor
 	  `Button.icon` (emoji OU imagem base64 inline) + `Button.color` (fundo,
 	  texto com contraste automático). Editor com paleta+cor custom, seletor
-	  de emoji (emoji-picker-react, nativo) e upload de imagem redimensionada.
+	  de emoji (Emoji Mart, nativo) e upload de imagem redimensionada.
 	  Cobre os itens "Ícones/imagens" e "Cores customizadas".
 
 

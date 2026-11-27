@@ -2,6 +2,7 @@ import {useTranslation} from 'react-i18next';
 import {ButtonConfig} from '../types';
 import {actionSummary} from '../lib/actions';
 import {isImageIcon, textColorFor} from '../lib/appearance';
+import {EMOJI_FONT_FAMILY} from '../lib/emoji';
 
 interface Props {
   button: ButtonConfig | null;
@@ -65,7 +66,12 @@ export default function DeckButton({button, mode, flash, onClick}: Props) {
             className={big ? 'h-full w-full object-contain' : 'mb-1 h-8 w-8 object-contain'}
           />
         ) : (
-          <span className={big ? 'text-6xl leading-none' : 'mb-0.5 text-2xl leading-none'}>{button.icon}</span>
+          <span
+            className={big ? 'text-6xl leading-none' : 'mb-0.5 text-2xl leading-none'}
+            style={{fontFamily: EMOJI_FONT_FAMILY}}
+          >
+            {button.icon}
+          </span>
         ))}
       {!big && !button.hideLabel && (
         <span className="min-w-0 max-w-full break-all text-base font-semibold leading-tight line-clamp-2" style={useColor ? undefined : {color: '#fff'}}>
