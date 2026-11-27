@@ -71,6 +71,8 @@ jobs:
   go:
     name: go (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
+    env:
+      CGO_ENABLED: "1"
     strategy:
       fail-fast: false
       matrix:

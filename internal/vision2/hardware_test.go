@@ -1,5 +1,3 @@
-//go:build linux
-
 package vision2
 
 import (
@@ -10,6 +8,9 @@ import (
 func TestVision2HardwareSmoke(t *testing.T) {
 	if os.Getenv("DECKPILOT_TEST_VISION2") != "1" {
 		t.Skip("defina DECKPILOT_TEST_VISION2=1 com OpenDeck fechado; altera os LCDs")
+	}
+	if !supported {
+		t.Fatal("Vision 2 indisponível neste build")
 	}
 	found, err := findDevices()
 	if err != nil {

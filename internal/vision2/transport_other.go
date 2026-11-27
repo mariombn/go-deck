@@ -1,4 +1,4 @@
-//go:build !linux
+//go:build !linux && (!cgo || (!darwin && !windows))
 
 package vision2
 
@@ -6,10 +6,8 @@ import "fmt"
 
 const supported = false
 
-type candidate struct{ path, identity string }
-
 func findDevices() ([]candidate, error) { return nil, nil }
 func openDevice(candidate) (*device, error) {
-	return nil, fmt.Errorf("Vision 2 disponível apenas no Linux")
+	return nil, fmt.Errorf("Vision 2 indisponível neste build")
 }
 func wouldBlock(error) bool { return false }

@@ -13,6 +13,8 @@ import (
 	"go-deck/internal/config"
 )
 
+type candidate struct{ path, identity string }
+
 // Info é um diagnóstico local, sem token de pareamento nem senha do OBS.
 type Info struct {
 	Supported   bool   `json:"supported"`
@@ -257,8 +259,15 @@ func (m *Manager) Run(ctx context.Context) {
 					}
 				}
 				if d == nil && len(found) > 0 {
-					current = found[0]
-					d, err = openDevice(current)
+					// Uma interface pode aparecer em mais de uma coleção HID no
+					// Windows. Tenta as demais se a primeira não aceitar os reports.
+					for _, c := range found {
+						d, err = openDevice(c)
+						if err == nil {
+							current = c
+							break
+						}
+					}
 					if err != nil {
 						m.connection("", err)
 						continue
