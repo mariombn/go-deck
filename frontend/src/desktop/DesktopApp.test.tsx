@@ -3,7 +3,7 @@
 // gerencia páginas e troca de idioma. Em pt-BR.
 //
 // i18n real (en). Mockamos TODO o módulo de bindings Wails (window.go.main.App)
-// por vi.fn()s que resolvem Promises. Também mockamos KeyCapture, emoji-picker
+// por vi.fn()s que resolvem Promises. Também mockamos KeyCapture
 // e o módulo bindings importado pelo AppearanceFields (mesmo caminho relativo).
 
 import {render, screen, fireEvent, waitFor} from '@testing-library/react';
@@ -43,11 +43,6 @@ vi.mock('./KeyCapture', () => ({
       set-combo
     </button>
   ),
-}));
-
-vi.mock('emoji-picker-react', () => ({
-  EmojiStyle: {NATIVE: 'native'},
-  default: () => <div />,
 }));
 
 function sampleConfig(over: Partial<DeckConfig> = {}): DeckConfig {

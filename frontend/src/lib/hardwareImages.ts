@@ -1,5 +1,6 @@
 import {ButtonConfig, DeckConfig} from '../types';
 import {isImageIcon, textColorFor} from './appearance';
+import {EMOJI_FONT_FAMILY} from './emoji';
 
 const SIZE = 112;
 
@@ -40,7 +41,7 @@ export async function hardwareButtonImage(button: ButtonConfig): Promise<string>
         // Um ícone corrompido não deve impedir as outras teclas de aparecer.
       }
     } else {
-      ctx.font = `${iconOnly ? 76 : 46}px sans-serif`;
+      ctx.font = `${iconOnly ? 76 : 46}px ${EMOJI_FONT_FAMILY}`;
       ctx.fillText(button.icon!, SIZE/2, iconOnly ? 56 : 38, 100);
     }
   }

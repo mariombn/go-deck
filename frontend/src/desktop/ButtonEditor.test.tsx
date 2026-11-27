@@ -2,7 +2,7 @@
 // os sub-editores (ActionFields + AppearanceFields + preview DeckButton) e
 // salva/cancela/exclui. Em pt-BR.
 //
-// i18n real (en). Mocks: KeyCapture (combo fixo), emoji-picker-react (leve),
+// i18n real (en). Mocks: KeyCapture (combo fixo)
 // e os bindings Wails usados pelo AppearanceFields (ListInstalledApps/PickAppIcon).
 
 import {render, screen, fireEvent} from '@testing-library/react';
@@ -19,15 +19,6 @@ vi.mock('./KeyCapture', () => ({
         set-combo
       </button>
     </div>
-  ),
-}));
-
-vi.mock('emoji-picker-react', () => ({
-  EmojiStyle: {NATIVE: 'native'},
-  default: ({onEmojiClick}: {onEmojiClick: (e: {emoji: string}) => void}) => (
-    <button type="button" onClick={() => onEmojiClick({emoji: '🎮'})}>
-      pick-emoji
-    </button>
   ),
 }));
 
