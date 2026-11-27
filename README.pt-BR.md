@@ -49,7 +49,8 @@ Para compilar, o binário é `build/bin/go-deck`; atalhos funcionam em Wayland e
 
 ### macOS
 
-1. Baixe o `go-deck-macos.zip`, descompacte e arraste o `go-deck.app` para Aplicativos.
+1. Abra o `go-deck-macos.dmg` e arraste `go-deck.app` para Aplicativos. Nas versões
+   até a `v0.2`, extraia o `go-deck-macos.zip` primeiro.
 2. Na primeira vez, **clique com o botão direito no app → Abrir** (ele ainda não é
    notarizado, então o duplo-clique normal é bloqueado pelo Gatekeeper).
 3. O app vai pedir permissão de **Acessibilidade** (necessária para simular o

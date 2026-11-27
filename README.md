@@ -49,7 +49,8 @@ GTK3/WebKitGTK 4.1. See [packages](docs/releases.md) and
 
 ### macOS
 
-1. Download `go-deck-macos.zip`, unzip it, and drag `go-deck.app` into Applications.
+1. Open `go-deck-macos.dmg` and drag `go-deck.app` into Applications. For releases
+   through `v0.2`, extract `go-deck-macos.zip` first.
 2. The first time, **right-click the app → Open** (it isn't notarized yet, so a
    normal double-click is blocked by Gatekeeper).
 3. The app will ask for **Accessibility** permission (required to simulate the
